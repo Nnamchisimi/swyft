@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Container,
   Typography,
@@ -10,9 +10,60 @@ import {
   Snackbar,
   Alert,
 } from '@mui/material';
-import RecentRides from './RecentRides'; // Import the component you just made
+import { useNavigate } from 'react-router-dom';  // Import useNavigate
+import RecentRides from './RecentRides';
 
-export default function RideBookingViewDesktop(props) {
+export default function RideBookingViewDesktop() {
+  const navigate = useNavigate();
+
+  const [passengerName, setPassengerName] = useState('');
+  const [pickup, setPickup] = useState('');
+  const [dropoff, setDropoff] = useState('');
+  const [rideType, setRideType] = useState('economy');
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+
+  const onPassengerNameChange = (e) => setPassengerName(e.target.value);
+  const onPickupChange = (e) => setPickup(e.target.value);
+  const onDropoffChange = (e) => setDropoff(e.target.value);
+  const onRideTypeChange = (_, newType) => {
+    if (newType !== null) setRideType(newType);
+  };
+
+  const onBookClick = async () => {
+    if (!passengerName || !pickup || !dropoff) {
+      setSnackbar({ open: true, message: 'Please fill all fields', severity: 'error' });
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:3001/api/rides', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passengerName, pickup, dropoff, rideType }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Booking failed');
+      }
+
+      setSnackbar({ open: true, message: data.message, severity: 'success' });
+
+      // Clear fields after booking
+      setPassengerName('');
+      setPickup('');
+      setDropoff('');
+      setRideType('economy');
+    } catch (error) {
+      setSnackbar({ open: true, message: error.message, severity: 'error' });
+    }
+  };
+
+  const onSnackbarClose = () => {
+    setSnackbar((prev) => ({ ...prev, open: false }));
+  };
+
   return (
     <>
       <Box
@@ -26,10 +77,28 @@ export default function RideBookingViewDesktop(props) {
           pl: '50px',
           display: 'flex',
           alignItems: 'center',
+          justifyContent: 'space-between', // space between title and button
         }}
       >
-        <img src="/taxifav.png" alt="Taxi Icon" style={{ width: 35, height: 35, marginLeft: 20 }} />
-        <span style={{ fontWeight: 'bold', fontSize: '1.75rem', marginLeft: '10px' }}>SWYFT</span>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <img
+            src="/taxifav.png"
+            alt="Taxi Icon"
+            style={{ width: 35, height: 35, marginLeft: 20 }}
+          />
+          <span style={{ fontWeight: 'bold', fontSize: '1.75rem', marginLeft: '10px' }}>
+            SWYFT
+          </span>
+        </Box>
+
+        <Button
+          variant="contained"
+          color="secondary"
+          onClick={() => navigate('/')} // redirect to homepage
+          sx={{ mr: 2 }}
+        >
+          Home
+        </Button>
       </Box>
 
       <Box
@@ -49,8 +118,6 @@ export default function RideBookingViewDesktop(props) {
             boxShadow: 0,
           }}
         >
-          {/* Your existing booking form code here, unchanged */}
-          {/* ... */}
           <Typography variant="h5" component="h1" align="left" gutterBottom sx={{ fontWeight: 'bold' }}>
             Book a Ride
           </Typography>
@@ -60,8 +127,8 @@ export default function RideBookingViewDesktop(props) {
             label="Passenger Name"
             variant="outlined"
             margin="normal"
-            value={props.passengerName}
-            onChange={props.onPassengerNameChange}
+            value={passengerName}
+            onChange={onPassengerNameChange}
             sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
           />
 
@@ -70,8 +137,8 @@ export default function RideBookingViewDesktop(props) {
             label="Pickup Location"
             variant="outlined"
             margin="normal"
-            value={props.pickup}
-            onChange={props.onPickupChange}
+            value={pickup}
+            onChange={onPickupChange}
             sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
           />
 
@@ -80,16 +147,16 @@ export default function RideBookingViewDesktop(props) {
             label="Drop-off Location"
             variant="outlined"
             margin="normal"
-            value={props.dropoff}
-            onChange={props.onDropoffChange}
+            value={dropoff}
+            onChange={onDropoffChange}
             sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
           />
 
           <Box sx={{ my: 3, display: 'flex', justifyContent: 'center' }}>
             <ToggleButtonGroup
-              value={props.rideType}
+              value={rideType}
               exclusive
-              onChange={props.onRideTypeChange}
+              onChange={onRideTypeChange}
               aria-label="ride type"
               color="primary"
             >
@@ -109,7 +176,7 @@ export default function RideBookingViewDesktop(props) {
             variant="contained"
             fullWidth
             size="large"
-            onClick={props.onBookClick}
+            onClick={onBookClick}
             sx={{
               bgcolor: '#82b1ff',
               color: 'white',
@@ -122,18 +189,17 @@ export default function RideBookingViewDesktop(props) {
           </Button>
 
           <Snackbar
-            open={props.snackbar.open}
+            open={snackbar.open}
             autoHideDuration={4000}
-            onClose={props.onSnackbarClose}
+            onClose={onSnackbarClose}
             anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
           >
-            <Alert onClose={props.onSnackbarClose} severity={props.snackbar.severity} sx={{ width: '100%' }}>
-              {props.snackbar.message}
+            <Alert onClose={onSnackbarClose} severity={snackbar.severity} sx={{ width: '100%' }}>
+              {snackbar.message}
             </Alert>
           </Snackbar>
         </Container>
 
-        {/* Recent rides side-by-side */}
         <RecentRides />
       </Box>
     </>
