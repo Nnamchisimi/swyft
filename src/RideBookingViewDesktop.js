@@ -95,7 +95,17 @@ export default function RideBookingViewDesktop() {
           variant="contained"
           color="secondary"
           onClick={() => navigate('/')} // redirect to homepage
-          sx={{ mr: 2 }}
+            sx={{
+              mr: 15,
+              borderRadius: '15px',       // round edges
+              backgroundColor: '#ffffff', // white background
+              fontWeight: 'bold',
+              padding: '10px 24px',
+              color: '#000000',           // black text
+              '&:hover': {
+                backgroundColor: '#f0f0f0', // light grey hover
+              },
+            }}
         >
           Home
         </Button>

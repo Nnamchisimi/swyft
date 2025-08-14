@@ -13,6 +13,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@mui/icons-material": "^7.3.1",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "mysql": "^2.18.1",
