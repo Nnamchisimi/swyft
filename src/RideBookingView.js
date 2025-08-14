@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import RideBookingViewDesktop from './RideBookingViewDesktop';
+import RideBookingViewDesktop from './passengerdashboard';
 import RideBookingViewMobile from './RideBookingViewMobile';
 
 export default function RideBookingView(props) {

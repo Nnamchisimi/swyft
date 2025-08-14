@@ -5,6 +5,8 @@ export default function RideBooking() {
   const [pickup, setPickup] = useState('');
   const [dropoff, setDropoff] = useState('');
   const [passengerName, setPassengerName] = useState('');
+  const [passengerEmail, setPassengerEmail] = useState('');
+  const [passengerPhone, setPassengerPhone] = useState('');
   const [rideType, setRideType] = useState('economy');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
@@ -13,13 +15,13 @@ export default function RideBooking() {
   };
 
   const handleBooking = () => {
-    if (!passengerName.trim() || !pickup.trim() || !dropoff.trim()) {
-      setSnackbar({ open: true, message: 'Please fill in Passenger Name, Pickup and Drop-off locations.', severity: 'error' });
+    if (!passengerName.trim() || !pickup.trim() || !dropoff.trim() || !passengerEmail.trim() || !passengerPhone.trim()) {
+      setSnackbar({ open: true, message: 'Please fill in all fields.', severity: 'error' });
       return;
     }
 
     // Prepare data to send
-    const rideData = { passengerName, pickup, dropoff, rideType };
+    const rideData = { passengerName, passengerEmail, passengerPhone, pickup, dropoff, rideType };
 
     // Send POST request to backend API
     fetch('http://localhost:3001/api/rides', {
@@ -37,6 +39,8 @@ export default function RideBooking() {
         setSnackbar({ open: true, message: data.message, severity: 'success' });
         // Clear inputs on success
         setPassengerName('');
+        setPassengerEmail('');
+        setPassengerPhone('');
         setPickup('');
         setDropoff('');
         setRideType('economy');
@@ -50,6 +54,10 @@ export default function RideBooking() {
     <RideBookingView
       passengerName={passengerName}
       onPassengerNameChange={(e) => setPassengerName(e.target.value)}
+      passengerEmail={passengerEmail}
+      onPassengerEmailChange={(e) => setPassengerEmail(e.target.value)}
+      passengerPhone={passengerPhone}
+      onPassengerPhoneChange={(e) => setPassengerPhone(e.target.value)}
       pickup={pickup}
       onPickupChange={(e) => setPickup(e.target.value)}
       dropoff={dropoff}

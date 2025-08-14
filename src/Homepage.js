@@ -12,9 +12,15 @@ import { useState, useEffect, useRef } from 'react';
 export default function HomePage() {
   const navigate = useNavigate();
 
-  const handleStartRiding = () => {
-    navigate('/ride-booking');
-  };
+const handleStartRiding = () => {
+  navigate('/getstarted', { state: { defaultUserType: 'Passenger' } });
+};
+
+const handleStartDriving = () => {
+  navigate('/getstarted', { state: { defaultUserType: 'Driver' } });
+};
+
+
 
   const [visible, setVisible] = useState(false);
   const ref = useRef(null);
@@ -271,9 +277,14 @@ export default function HomePage() {
     ))}
   </List>
 
-  <Button variant="contained" size="large" sx={{ mt: 2 }}>
-    Start Driving
-  </Button>
+   <Button
+              variant="contained"
+              size="large"
+              sx={{ mt: 2 }}
+              onClick={handleStartDriving}
+            >
+              Start Riding
+            </Button>
   
 </Container>
 
