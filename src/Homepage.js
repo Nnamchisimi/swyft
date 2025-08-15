@@ -283,8 +283,8 @@ const handleStartDriving = () => {
               sx={{ mt: 2 }}
               onClick={handleStartDriving}
             >
-              Start Riding
-            </Button>
+              Start Driving
+             </Button>
   
 </Container>
 
