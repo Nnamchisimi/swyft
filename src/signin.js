@@ -12,17 +12,22 @@ export default function SignIn() {
   const [loading, setLoading] = useState(false);
   const isMobile = useMediaQuery('(max-width:600px)');
 
-const handleSubmit = async (e) => {
+ const handleSubmit = async (e) => {
   e.preventDefault();
   setError('');
   setLoading(true);
 
   try {
-    const response = await axios.post('http://localhost:3001/api/users/login', { email, password });
+    const response = await axios.post('http://localhost:3001/api/users/login', {
+      email,
+      password,
+    });
+
     const user = response.data;
 
+    // Redirect based on role
     if (user.role === 'Passenger') {
-     navigate('/ride-booking', { state: { email: user.email } });
+      navigate('/ride-booking');
     } else if (user.role === 'Driver') {
       navigate('/driver');
     } else {
@@ -30,13 +35,16 @@ const handleSubmit = async (e) => {
     }
   } catch (err) {
     console.error(err);
-    if (err.response) setError(err.response.data.error);
-    else setError('Failed to fetch user data');
+    // Handle different error responses
+    if (err.response) {
+      setError(err.response.data.error || 'Login failed');
+    } else {
+      setError('Server error');
+    }
   } finally {
     setLoading(false);
   }
 };
-
 
   return (
     <>

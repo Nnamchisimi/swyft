@@ -82,8 +82,6 @@ app.post('/api/users', async (req, res) => {
   });
 });
 
-
-
 // === VERIFY EMAIL ===
 app.get('/api/users/verify', (req, res) => {
   const { token } = req.query;
@@ -163,20 +161,6 @@ db.query(
  } 
 ); 
 });
-
-// Example backend (Express + MySQL)
-app.get('/api/user/profile', (req, res) => {
-  const { email } = req.query; // or get from session/jwt
-  if (!email) return res.status(400).json({ error: "No email provided" });
-
-  db.query("SELECT email FROM users WHERE email = ?", [email], (err, results) => {
-    if (err) return res.status(500).json({ error: "DB error" });
-    if (results.length === 0) return res.status(404).json({ error: "User not found" });
-
-    res.json(results[0]); // returns { email: "..."}
-  });
-});
-
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

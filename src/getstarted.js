@@ -68,7 +68,7 @@ export default function GetStarted() {
       navigate('/signin');
     } catch (err) {
       console.error('Error:', err);
-      alert('Something went wrong. Please try again.');
+      alert('Something went wrong');
       setLoading(false);
     } finally {
       setLoading(false);

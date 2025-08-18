@@ -15,6 +15,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import RecentRides from './RecentRides';
 
+
 export default function RideBookingView() {
   const navigate = useNavigate();
   const theme = useTheme();
@@ -30,23 +31,31 @@ export default function RideBookingView() {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   // ✅ Prefill email from backend / auth context
-  useEffect(() => {
-    async function fetchUserEmail() {
-      try {
-        // Example: replace with your real API/auth call
-        const res = await fetch("http://localhost:3001/api/user/profile", {
-          credentials: "include",
-        });
-        const data = await res.json();
-        if (res.ok && data.email) {
-          setPassengerEmail(data.email);
-        }
-      } catch (err) {
-        console.error("Failed to fetch user email", err);
+useEffect(() => {
+  async function fetchUserEmail() {
+    try {
+      // Assume you have stored the token in memory or context
+      const token = sessionStorage.getItem('authToken'); // or use state/context
+
+      const res = await fetch('http://localhost:3001/api/user/profile', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.email) {
+        setPassengerEmail(data.email);
+      } else {
+        console.error('Failed to fetch email:', data.error);
       }
+    } catch (err) {
+      console.error('Error fetching user email:', err);
     }
-    fetchUserEmail();
-  }, []);
+  }
+
+  fetchUserEmail();
+}, []);
+
 
   const handleChange = (setter) => (e) => setter(e.target.value);
   const handleRideTypeChange = (_, newType) => { if (newType) setRideType(newType); };
