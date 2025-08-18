@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Typography,
@@ -29,6 +29,25 @@ export default function RideBookingView() {
   const [rideType, setRideType] = useState('economy');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
+  // ✅ Prefill email from backend / auth context
+  useEffect(() => {
+    async function fetchUserEmail() {
+      try {
+        // Example: replace with your real API/auth call
+        const res = await fetch("http://localhost:3001/api/user/profile", {
+          credentials: "include",
+        });
+        const data = await res.json();
+        if (res.ok && data.email) {
+          setPassengerEmail(data.email);
+        }
+      } catch (err) {
+        console.error("Failed to fetch user email", err);
+      }
+    }
+    fetchUserEmail();
+  }, []);
+
   const handleChange = (setter) => (e) => setter(e.target.value);
   const handleRideTypeChange = (_, newType) => { if (newType) setRideType(newType); };
 
@@ -49,8 +68,12 @@ export default function RideBookingView() {
 
       setSnackbar({ open: true, message: data.message, severity: 'success' });
 
-      setPassengerName(''); setPassengerEmail(''); setPassengerPhone('');
-      setPickup(''); setDropoff(''); setRideType('economy');
+      setPassengerName('');
+      setPassengerPhone('');
+      setPickup('');
+      setDropoff('');
+      setRideType('economy');
+      // keep passengerEmail as-is (prefilled from DB)
     } catch (error) {
       setSnackbar({ open: true, message: error.message, severity: 'error' });
     }
@@ -75,7 +98,16 @@ export default function RideBookingView() {
       </Typography>
 
       <TextField fullWidth label="Passenger Name" margin="normal" value={passengerName} onChange={handleChange(setPassengerName)} />
-      <TextField fullWidth label="Passenger Email" margin="normal" value={passengerEmail} onChange={handleChange(setPassengerEmail)} />
+      
+      {/* ✅ Prefilled + ReadOnly Email */}
+      <TextField
+        fullWidth
+        label="Passenger Email"
+        margin="normal"
+        value={passengerEmail}
+        InputProps={{ readOnly: true }}
+      />
+
       <TextField fullWidth label="Passenger Phone" margin="normal" value={passengerPhone} onChange={handleChange(setPassengerPhone)} />
       <TextField fullWidth label="Pickup Location" margin="normal" value={pickup} onChange={handleChange(setPickup)} />
       <TextField fullWidth label="Drop-off Location" margin="normal" value={dropoff} onChange={handleChange(setDropoff)} />
@@ -160,9 +192,10 @@ export default function RideBookingView() {
       >
         {form}
         <RecentRides
+          userEmail={passengerEmail}  // still passes to RecentRides
           sx={{
             width: '100%',
-            maxWidth: 500, // match booking form
+            maxWidth: 500,
           }}
         />
       </Box>

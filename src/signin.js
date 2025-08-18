@@ -12,38 +12,31 @@ export default function SignIn() {
   const [loading, setLoading] = useState(false);
   const isMobile = useMediaQuery('(max-width:600px)');
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true); // Start loader
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setError('');
+  setLoading(true);
 
-    try {
-      const response = await axios.get(`http://localhost:3001/api/users?email=${email}`);
-      const user = response.data[0]; // assuming response.data is an array
+  try {
+    const response = await axios.post('http://localhost:3001/api/users/login', { email, password });
+    const user = response.data;
 
-      if (!user) {
-        setError('Email not found');
-        setLoading(false);
-        return;
-      }
-
-      // Here you could also verify password if stored in DB
-
-      // Redirect based on role
-      if (user.role === 'Passenger') {
-        navigate('/ride-booking');
-      } else if (user.role === 'Driver') {
-        navigate('/driver');
-      } else {
-        setError('Unknown user role');
-      }
-    } catch (err) {
-      console.error(err);
-      setError('Failed to fetch user data');
-    } finally {
-      setLoading(false); // Stop loader
+    if (user.role === 'Passenger') {
+     navigate('/ride-booking', { state: { email: user.email } });
+    } else if (user.role === 'Driver') {
+      navigate('/driver');
+    } else {
+      setError('Unknown user role');
     }
-  };
+  } catch (err) {
+    console.error(err);
+    if (err.response) setError(err.response.data.error);
+    else setError('Failed to fetch user data');
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <>

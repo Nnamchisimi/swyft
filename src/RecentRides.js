@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Typography, List, ListItem, ListItemText, Divider, useTheme, useMediaQuery } from '@mui/material';
 
-export default function RecentRides() {
+export default function RecentRides({ userEmail }) {
   const [rides, setRides] = useState([]);
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
@@ -9,9 +9,13 @@ export default function RecentRides() {
   useEffect(() => {
     fetch('http://localhost:3001/api/rides')
       .then(res => res.json())
-      .then(data => setRides(data))
+      .then(data => {
+        // Filter rides for the logged-in user's email
+        const userRides = data.filter(ride => ride.email === userEmail);
+        setRides(userRides);
+      })
       .catch(err => console.error('Failed to fetch rides:', err));
-  }, []);
+  }, [userEmail]);
 
   return (
     <Box
@@ -46,7 +50,6 @@ export default function RecentRides() {
       >
         Recent Rides
       </Box>
-
       <List sx={{ p: 2 }}>
         {rides.length === 0 ? (
           <Typography variant="body2" color="text.secondary">

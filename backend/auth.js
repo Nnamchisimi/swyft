@@ -16,10 +16,21 @@ router.post('/signin', (req, res) => {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 
-  // Return user without password
+  // ✅ Save user in session
+  req.session.user = { email: user.email, role: user.role };
+
   const { password: pw, ...userWithoutPassword } = user;
   res.json(userWithoutPassword);
 });
+
+// Profile route (new)
+router.get('/profile', (req, res) => {
+  if (!req.session.user) {
+    return res.status(401).json({ error: "Not logged in" });
+  }
+  res.json(req.session.user);
+});
+
 
 // Signup route
 router.post('/signup', (req, res) => {

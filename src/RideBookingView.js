@@ -1,9 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import RideBookingViewDesktop from './passengerdashboard';
 import RideBookingViewMobile from './RideBookingViewMobile';
+import { useLocation } from "react-router-dom";
 
 export default function RideBookingView(props) {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  
+
+
+  const location = useLocation();
+
+  const [passengerEmail, setPassengerEmail] = useState('');
 
   useEffect(() => {
     const handleResize = () => {
@@ -15,3 +22,27 @@ export default function RideBookingView(props) {
 
   return isMobile ? <RideBookingViewMobile {...props} /> : <RideBookingViewDesktop {...props} />;
 }
+
+
+
+
+  useEffect(() => {
+    // ✅ Prefill from navigation state (fastest)
+    if (location.state?.email) {
+      setPassengerEmail(location.state.email);
+    } else {
+      // fallback: fetch from backend
+      async function fetchUserEmail() {
+        try {
+          const res = await fetch("http://localhost:3001/api/user/profile?email=test@example.com");
+          const data = await res.json();
+          if (res.ok && data.email) {
+            setPassengerEmail(data.email);
+          }
+        } catch (err) {
+          console.error("Failed to fetch user email", err);
+        }
+      }
+      fetchUserEmail();
+    }
+  }, [location.state]);
