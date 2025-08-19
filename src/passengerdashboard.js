@@ -14,14 +14,17 @@ import {
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import RecentRides from './RecentRides';
+import { io } from 'socket.io-client';
 
+// Initialize Socket.IO client
+const socket = io("http://localhost:3001"); // replace with your backend URL
 
-export default function RideBookingView() {
+export default function PassengerDashboard() {
   const navigate = useNavigate();
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
 
-  // State for form fields
+  // Form state
   const [passengerName, setPassengerName] = useState('');
   const [passengerEmail, setPassengerEmail] = useState('');
   const [passengerPhone, setPassengerPhone] = useState('');
@@ -30,32 +33,52 @@ export default function RideBookingView() {
   const [rideType, setRideType] = useState('economy');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
-  // ✅ Prefill email from backend / auth context
-useEffect(() => {
-  async function fetchUserEmail() {
-    try {
-      // Assume you have stored the token in memory or context
-      const token = sessionStorage.getItem('authToken'); // or use state/context
-
-      const res = await fetch('http://localhost:3001/api/user/profile', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const data = await res.json();
-
-      if (res.ok && data.email) {
-        setPassengerEmail(data.email);
-      } else {
-        console.error('Failed to fetch email:', data.error);
+  // Prefill email from session or backend
+  useEffect(() => {
+    const savedEmail = sessionStorage.getItem('userEmail');
+    if (savedEmail) {
+      setPassengerEmail(savedEmail);
+    } else {
+      async function fetchUserEmail() {
+        try {
+          const token = sessionStorage.getItem('authToken');
+          const res = await fetch('http://localhost:3001/api/user/profile', {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const data = await res.json();
+          if (res.ok && data.email) {
+            setPassengerEmail(data.email);
+            sessionStorage.setItem('userEmail', data.email);
+          }
+        } catch (err) {
+          console.error('Error fetching user email:', err);
+        }
       }
-    } catch (err) {
-      console.error('Error fetching user email:', err);
+      fetchUserEmail();
     }
-  }
+  }, []);
 
-  fetchUserEmail();
-}, []);
+  // Join private room for real-time updates
+  useEffect(() => {
+    if (!passengerEmail) return;
 
+    socket.emit("joinRoom", passengerEmail);
+
+    const handleRideUpdate = (rideData) => {
+      setSnackbar({
+        open: true,
+        message: `Ride Update: ${rideData.status}`,
+        severity: 'info',
+      });
+    };
+
+    socket.on("rideUpdate", handleRideUpdate);
+
+    return () => {
+      socket.off("rideUpdate", handleRideUpdate);
+      socket.emit("leaveRoom", passengerEmail);
+    };
+  }, [passengerEmail]);
 
   const handleChange = (setter) => (e) => setter(e.target.value);
   const handleRideTypeChange = (_, newType) => { if (newType) setRideType(newType); };
@@ -77,12 +100,21 @@ useEffect(() => {
 
       setSnackbar({ open: true, message: data.message, severity: 'success' });
 
+      // Reset form (keep email)
       setPassengerName('');
       setPassengerPhone('');
       setPickup('');
       setDropoff('');
       setRideType('economy');
-      // keep passengerEmail as-is (prefilled from DB)
+
+      // Notify server about new ride
+      socket.emit("newRide", {
+        passengerEmail,
+        pickup,
+        dropoff,
+        rideType,
+      });
+
     } catch (error) {
       setSnackbar({ open: true, message: error.message, severity: 'error' });
     }
@@ -90,65 +122,9 @@ useEffect(() => {
 
   const onSnackbarClose = () => setSnackbar((prev) => ({ ...prev, open: false }));
 
-  const form = (
-    <Container
-      maxWidth="xs"
-      sx={{
-        p: 4,
-        border: '1px solid #ccc',
-        borderRadius: 3,
-        boxShadow: 0,
-        width: '100%',
-        maxWidth: 360, // consistent width
-      }}
-    >
-      <Typography variant={isDesktop ? "h5" : "h6"} align={isDesktop ? "left" : "center"} gutterBottom sx={{ fontWeight: 'bold' }}>
-        Book a Ride
-      </Typography>
-
-      <TextField fullWidth label="Passenger Name" margin="normal" value={passengerName} onChange={handleChange(setPassengerName)} />
-      
-      {/* ✅ Prefilled + ReadOnly Email */}
-      <TextField
-        fullWidth
-        label="Passenger Email"
-        margin="normal"
-        value={passengerEmail}
-        InputProps={{ readOnly: true }}
-      />
-
-      <TextField fullWidth label="Passenger Phone" margin="normal" value={passengerPhone} onChange={handleChange(setPassengerPhone)} />
-      <TextField fullWidth label="Pickup Location" margin="normal" value={pickup} onChange={handleChange(setPickup)} />
-      <TextField fullWidth label="Drop-off Location" margin="normal" value={dropoff} onChange={handleChange(setDropoff)} />
-
-      <Box sx={{ my: isDesktop ? 3 : 2, display: 'flex', justifyContent: 'center' }}>
-        <ToggleButtonGroup value={rideType} exclusive onChange={handleRideTypeChange}>
-          <ToggleButton value="economy">Economy — 150 TL</ToggleButton>
-          <ToggleButton value="premium">Premium — 200 TL</ToggleButton>
-          <ToggleButton value="luxury">Luxury — 300 TL</ToggleButton>
-        </ToggleButtonGroup>
-      </Box>
-
-      <Button
-        variant="contained"
-        fullWidth
-        size="large"
-        onClick={onBookClick}
-        sx={{ bgcolor: '#82b1ff', '&:hover': { bgcolor: '#5a8de0' } }}
-      >
-        Book Ride
-      </Button>
-
-      <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={onSnackbarClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-        <Alert onClose={onSnackbarClose} severity={snackbar.severity} sx={{ width: '100%' }}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-    </Container>
-  );
-
   return (
     <>
+      {/* Header */}
       <Box
         sx={{
           bgcolor: '#82b1ff',
@@ -167,7 +143,6 @@ useEffect(() => {
           <img src="/taxifav.png" alt="Taxi Icon" style={{ width: isDesktop ? 35 : 30, height: isDesktop ? 35 : 30, marginRight: 10 }} />
           <span style={{ fontWeight: 'bold', fontSize: isDesktop ? '1.75rem' : '1.5rem' }}>SWYFT</span>
         </Box>
-
         {isDesktop && (
           <Button
             variant="contained"
@@ -188,6 +163,7 @@ useEffect(() => {
         )}
       </Box>
 
+      {/* Main content */}
       <Box
         sx={{
           display: 'flex',
@@ -196,17 +172,57 @@ useEffect(() => {
           mt: 2,
           px: isDesktop ? 7 : 2,
           gap: 3,
-          alignItems: isDesktop ? 'flex-start' : 'center', // center children on mobile
+          alignItems: isDesktop ? 'flex-start' : 'center',
         }}
       >
-        {form}
-        <RecentRides
-          userEmail={passengerEmail}  // still passes to RecentRides
+        {/* Ride booking form */}
+        <Container
+          maxWidth="xs"
           sx={{
+            p: 4,
+            border: '1px solid #ccc',
+            borderRadius: 3,
             width: '100%',
-            maxWidth: 500,
+            maxWidth: 360,
           }}
-        />
+        >
+          <Typography variant={isDesktop ? "h5" : "h6"} align={isDesktop ? "left" : "center"} gutterBottom sx={{ fontWeight: 'bold' }}>
+            Book a Ride
+          </Typography>
+
+          <TextField fullWidth label="Passenger Name" margin="normal" value={passengerName} onChange={handleChange(setPassengerName)} />
+          <TextField fullWidth label="Passenger Email" margin="normal" value={passengerEmail} disabled />
+          <TextField fullWidth label="Passenger Phone" margin="normal" value={passengerPhone} onChange={handleChange(setPassengerPhone)} />
+          <TextField fullWidth label="Pickup Location" margin="normal" value={pickup} onChange={handleChange(setPickup)} />
+          <TextField fullWidth label="Drop-off Location" margin="normal" value={dropoff} onChange={handleChange(setDropoff)} />
+
+          <Box sx={{ my: isDesktop ? 3 : 2, display: 'flex', justifyContent: 'center' }}>
+            <ToggleButtonGroup value={rideType} exclusive onChange={handleRideTypeChange}>
+              <ToggleButton value="economy">Economy — 150 TL</ToggleButton>
+              <ToggleButton value="premium">Premium — 200 TL</ToggleButton>
+              <ToggleButton value="luxury">Luxury — 300 TL</ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
+
+          <Button
+            variant="contained"
+            fullWidth
+            size="large"
+            onClick={onBookClick}
+            sx={{ bgcolor: '#82b1ff', '&:hover': { bgcolor: '#5a8de0' } }}
+          >
+            Book Ride
+          </Button>
+
+          <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={onSnackbarClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+            <Alert onClose={onSnackbarClose} severity={snackbar.severity} sx={{ width: '100%' }}>
+              {snackbar.message}
+            </Alert>
+          </Snackbar>
+        </Container>
+
+        {/* Recent rides */}
+        <RecentRides userEmail={passengerEmail} />
       </Box>
     </>
   );

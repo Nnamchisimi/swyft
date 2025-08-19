@@ -1,20 +1,57 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Typography, List, ListItem, ListItemText, Divider, useTheme, useMediaQuery } from '@mui/material';
+import { io } from 'socket.io-client';
+
+// Same socket instance
+const socket = io("http://localhost:3001");
 
 export default function RecentRides({ userEmail }) {
   const [rides, setRides] = useState([]);
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
 
+  // Fetch initial rides
   useEffect(() => {
-    fetch('http://localhost:3001/api/rides')
-      .then(res => res.json())
-      .then(data => {
-        // Filter rides for the logged-in user's email
-        const userRides = data.filter(ride => ride.email === userEmail);
-        setRides(userRides);
-      })
-      .catch(err => console.error('Failed to fetch rides:', err));
+    if (!userEmail) return;
+
+    async function fetchRides() {
+      try {
+        const res = await fetch(`http://localhost:3001/api/rides?email=${encodeURIComponent(userEmail)}`);
+        const data = await res.json();
+        setRides(data);
+      } catch (err) {
+        console.error('Error fetching rides:', err);
+      }
+    }
+
+    fetchRides();
+  }, [userEmail]);
+
+  // Real-time updates
+  useEffect(() => {
+    if (!userEmail) return;
+
+    socket.emit("joinRoom", userEmail);
+
+    const handleRideUpdate = (rideData) => {
+      setRides(prevRides => {
+        const index = prevRides.findIndex(r => r.id === rideData.id);
+        if (index !== -1) {
+          const updated = [...prevRides];
+          updated[index] = rideData;
+          return updated;
+        } else {
+          return [rideData, ...prevRides];
+        }
+      });
+    };
+
+    socket.on("rideUpdate", handleRideUpdate);
+
+    return () => {
+      socket.off("rideUpdate", handleRideUpdate);
+      socket.emit("leaveRoom", userEmail);
+    };
   }, [userEmail]);
 
   return (

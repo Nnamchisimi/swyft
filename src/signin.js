@@ -12,39 +12,62 @@ export default function SignIn() {
   const [loading, setLoading] = useState(false);
   const isMobile = useMediaQuery('(max-width:600px)');
 
- const handleSubmit = async (e) => {
-  e.preventDefault();
-  setError('');
-  setLoading(true);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
 
-  try {
-    const response = await axios.post('http://localhost:3001/api/users/login', {
-      email,
-      password,
-    });
+    try {
+      const response = await axios.post('http://localhost:3001/api/users/login', {
+        email,
+        password,
+      });
 
-    const user = response.data;
+      const user = response.data;
 
-    // Redirect based on role
-    if (user.role === 'Passenger') {
-      navigate('/ride-booking');
-    } else if (user.role === 'Driver') {
-      navigate('/driver');
-    } else {
-      setError('Unknown user role');
-    }
-  } catch (err) {
-    console.error(err);
-    // Handle different error responses
-    if (err.response) {
-      setError(err.response.data.error || 'Login failed');
-    } else {
-      setError('Server error');
-    }
-  } finally {
-    setLoading(false);
-  }
+      // Save auth token
+      if (user.token) {
+        sessionStorage.setItem('authToken', user.token);
+      }
+
+      // Save email (supports both { email } and { user: { email } })
+      const savedEmail = user.email || user.user?.email;
+      if (savedEmail) {
+        sessionStorage.setItem('userEmail', savedEmail);
+      }
+
+    const driverData = {
+  name: user.name || (user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : user.user?.name),
+  email: user.email || user.user?.email,
+  phone: user.phone || user.user?.phone,
+  vehicle: user.vehicle || user.user?.vehicle,
 };
+
+sessionStorage.setItem('driverInfo', JSON.stringify(driverData));
+
+
+
+      // Redirect based on role
+      const role = user.role || user.user?.role;
+      if (role === 'Passenger') {
+        navigate('/ride-booking');
+      } else if (role === 'Driver') {
+        navigate('/driver');
+      } else {
+        setError('Unknown user role');
+      }
+
+    } catch (err) {
+      console.error(err);
+      if (err.response) {
+        setError(err.response.data.error || 'Login failed');
+      } else {
+        setError('Server error');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <>
@@ -146,7 +169,7 @@ export default function SignIn() {
             type="submit"
             variant="contained"
             fullWidth
-            disabled={loading} // Disable button when loading
+            disabled={loading}
             sx={{
               borderRadius: '15px',
               borderColor: '#ffffff',

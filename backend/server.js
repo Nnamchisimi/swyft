@@ -82,6 +82,15 @@ app.post('/api/users', async (req, res) => {
   });
 });
 
+// GET all drivers
+app.get('/api/drivers', (req, res) => {
+  const query = 'SELECT id, first_name, last_name, email, phone, vehicle_plate FROM users WHERE role = "Driver"';
+  db.query(query, (err, results) => {
+    if (err) return res.status(500).json({ error: 'Failed to fetch drivers' });
+    res.json(results);
+  });
+});
+
 // === VERIFY EMAIL ===
 app.get('/api/users/verify', (req, res) => {
   const { token } = req.query;
@@ -97,7 +106,6 @@ app.get('/api/users/verify', (req, res) => {
         if (err2) return res.send('<h3>Failed to verify email</h3>');
 
         db.query('DELETE FROM email_verification_tokens WHERE token = ?', [token]);
-
         res.redirect('http://localhost:3000/signin');
       });
     });
@@ -116,50 +124,91 @@ app.post('/api/users/login', (req, res) => {
     if (results.length === 0) return res.status(404).json({ error: 'User not found' });
 
     const user = results[0];
-
     if (user.is_verified === 0) return res.status(403).json({ error: 'Email not verified' });
 
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ error: 'Incorrect password' });
 
-    res.json({ id: user.id, role: user.role, firstName: user.first_name });
+    res.json({ id: user.id, role: user.role, firstName: user.first_name, email: user.email });
   });
 });
 
-// GET API to fetch recent rides (all rides) 
-app.get('/api/rides', (req, res) => { 
-db.query('SELECT * FROM rides ORDER BY created_at DESC LIMIT 10',
- (err, results) => { 
-if (err) { console.error('Error fetching rides:', err);
- return res.status(500).json({ error: 'Failed to fetch rides' }); 
-} res.json(results); }); });
+// GET rides (optionally filter by passenger_email or driver_email)
+app.get('/api/rides', (req, res) => {
+  const { passenger_email, driver_email } = req.query;
+  let query = 'SELECT * FROM rides';
+  let conditions = [];
+  let params = [];
 
+  if (passenger_email) {
+    conditions.push('passenger_email = ?');
+    params.push(passenger_email);
+  }
 
-// POST API to insert new ride into the rides table
- app.post('/api/rides', (req, res) => { 
-	const { passengerName, passengerEmail, passengerPhone, pickup,
- 	dropoff, rideType } = req.body; 
-if (!passengerName || !passengerEmail || !passengerPhone || !pickup ||
-!dropoff || !rideType) { 
-	return res.status(400).json({ error: 'Please provide all required fields' 
-}); } 
-	const query = `
-    INSERT INTO rides 
-      (passenger_name, passenger_email, passenger_phone, pickup_location, dropoff_location, ride_type) 
+  if (driver_email) {
+    conditions.push('driver_email = ?');
+    params.push(driver_email);
+  }
+
+  if (conditions.length > 0) query += ' WHERE ' + conditions.join(' AND ');
+  query += ' ORDER BY created_at DESC';
+
+  db.query(query, params, (err, results) => {
+    if (err) return res.status(500).json({ error: 'Failed to fetch rides' });
+    res.json(results);
+  });
+});
+
+// GET active rides for a driver
+app.get('/api/active-rides', (req, res) => {
+  const { driver_email } = req.query;
+  if (!driver_email) return res.status(400).json({ error: 'driver_email is required' });
+
+  const query = `SELECT * FROM rides WHERE driver_email = ? AND status = 'accepted' ORDER BY created_at DESC`;
+  db.query(query, [driver_email], (err, results) => {
+    if (err) return res.status(500).json({ error: 'Failed to fetch active rides' });
+    res.json(results);
+  });
+});
+
+// POST new ride
+app.post('/api/rides', (req, res) => {
+  const { passengerName, passengerEmail, passengerPhone, pickup, dropoff, rideType } = req.body;
+  if (!passengerName || !passengerEmail || !passengerPhone || !pickup || !dropoff || !rideType)
+    return res.status(400).json({ error: 'Please provide all required fields' });
+
+  const query = `
+    INSERT INTO rides (passenger_name, passenger_email, passenger_phone, pickup_location, dropoff_location, ride_type)
     VALUES (?, ?, ?, ?, ?, ?)
   `;
-db.query(
- query, [passengerName, passengerEmail, passengerPhone, pickup, dropoff,
- rideType],
-	 (err, result) => { 
-	if (err) { 
-	console.error('Error inserting ride:', err);
- 	return res.status(500).json({ error: 'Failed to save ride' });
- 	} 
-	res.status(201).json({ message: 'Ride booked successfully', rideId:
- 	result.insertId });
- } 
-); 
+  db.query(query, [passengerName, passengerEmail, passengerPhone, pickup, dropoff, rideType], (err, result) => {
+    if (err) return res.status(500).json({ error: 'Failed to save ride' });
+    res.status(201).json({ message: 'Ride booked successfully', rideId: result.insertId });
+  });
+});
+
+// Accept ride
+app.post('/api/rides/:rideId/accept', (req, res) => {
+  const rideId = req.params.rideId;
+  const { name, email, phone, vehicle } = req.body;
+
+  db.query('SELECT * FROM rides WHERE id = ?', [rideId], (err, results) => {
+    if (err) return res.status(500).json({ error: 'Server error' });
+    if (results.length === 0) return res.status(404).json({ error: 'Ride not found' });
+
+    const ride = results[0];
+    if (ride.driver_assigned) return res.status(400).json({ error: 'Ride already accepted' });
+
+    const updateQuery = `
+      UPDATE rides 
+      SET driver_name = ?, driver_email = ?, driver_phone = ?, driver_vehicle = ?, status = 'accepted', driver_assigned = 1
+      WHERE id = ?
+    `;
+    db.query(updateQuery, [name, email, phone, vehicle, rideId], (err2) => {
+      if (err2) return res.status(500).json({ error: 'Failed to accept ride' });
+      res.json({ message: 'Ride accepted successfully', rideId });
+    });
+  });
 });
 
 const PORT = process.env.PORT || 3001;

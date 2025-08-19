@@ -1,40 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import {
-  Box,
-  Typography,
-  List,
-  ListItem,
-  ListItemText,
-  Divider,
-  useTheme,
-  useMediaQuery,
-} from '@mui/material';
+import React from 'react';
+import { Box, Typography, List, ListItem, ListItemText, Divider, useTheme, useMediaQuery } from '@mui/material';
 
-export default function ActiveRides({ driver, refreshTrigger }) {
+export default function ActiveRides({ rides }) {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
-  const [activeRides, setActiveRides] = useState([]);
-
-  // Fetch active rides from backend
-  const fetchActiveRides = () => {
-    if (!driver) return;
-
-    fetch(`http://localhost:3001/api/active-rides/${encodeURIComponent(driver)}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setActiveRides(Array.isArray(data) ? data : []);
-      })
-      .catch((err) => console.error('Failed to fetch active rides:', err));
-  };
-
-  // Fetch rides on mount, when driver changes, or refreshTrigger changes
-  useEffect(() => {
-    fetchActiveRides();
-
-    // Optional: auto-refresh every 15 seconds
-    const interval = setInterval(fetchActiveRides, 15000);
-    return () => clearInterval(interval);
-  }, [driver, refreshTrigger]);
 
   return (
     <Box
@@ -71,33 +40,43 @@ export default function ActiveRides({ driver, refreshTrigger }) {
         Active Rides
       </Box>
 
-      {/* List of active rides */}
       <List sx={{ p: 2 }}>
-        {activeRides.length === 0 ? (
+        {rides.length === 0 ? (
           <Typography variant="body2" color="text.secondary">
             No active rides.
           </Typography>
         ) : (
-          activeRides.map((ride) => (
+          rides.map((ride) => (
             <React.Fragment key={ride.id}>
               <ListItem alignItems="flex-start">
                 <ListItemText
                   primary={`#${ride.id} - ${ride.passenger_name} (${ride.ride_type})`}
                   secondary={
-                    <>
-                      <Typography>From: {ride.pickup_location}</Typography>
-                      <Typography>To: {ride.dropoff_location}</Typography>
-                        <Typography>Phone: {ride.passenger_phone}</Typography>
-                        <Typography>Driver Name: {ride.driver_name}</Typography>
-                          <Typography>Driver Phone: {ride.driver_phone}</Typography>
-                          <Typography>Driver vehicle: {ride.driver_vehicle}</Typography>
-                      <Typography>
-                        Requested: {new Date(ride.created_at).toLocaleString()}
-                      </Typography>
-                      <Typography>Fare: ${ride.price?.toFixed(2) || '0.00'}</Typography>
+                   <>
+                        <Typography>From: {ride.pickup_location}</Typography>
+                        <Typography>To: {ride.dropoff_location}</Typography>
+                        <Typography>
+                          Passenger: {ride.passenger_name} - {ride.passenger_phone}
+                        </Typography>
 
-                      
-                    </>
+                        <Typography>
+                          Driver: {ride.driver_name || '—'} 
+                        </Typography>
+                        <Typography>
+                          Driver Phone: {ride.driver_phone || '—'}
+                        </Typography>
+                        <Typography>
+                          Vehicle: {ride.driver_vehicle || '—'}
+                        </Typography>
+
+                        <Typography>
+                          Requested: {new Date(ride.created_at).toLocaleString()}
+                        </Typography>
+                        <Typography>
+                          Fare: ${ride.price ? ride.price.toFixed(2) : '0.00'}
+                        </Typography>
+                      </>
+
                   }
                 />
               </ListItem>
@@ -108,4 +87,4 @@ export default function ActiveRides({ driver, refreshTrigger }) {
       </List>
     </Box>
   );
-}
+}  
