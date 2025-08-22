@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import io from 'socket.io-client';
+import socket from "./socket";
 import { Box, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions, useTheme, useMediaQuery } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import ActiveRides from './activerides';
@@ -9,12 +9,14 @@ export default function DriverDashboard() {
   const navigate = useNavigate();
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
-
   const [pendingRides, setPendingRides] = useState([]);
   const [activeRides, setActiveRides] = useState([]);
   const [selectedRide, setSelectedRide] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [driverInfo, setDriverInfo] = useState({ name: '', email: '', phone: '', vehicle: '' });
+
+  const handleOpenDialog = ride => { setSelectedRide(ride); setOpenDialog(true); };
+  const handleCloseDialog = () => { setOpenDialog(false); setSelectedRide(null); };
 
   // Load driver info from sessionStorage
   useEffect(() => {
@@ -53,8 +55,7 @@ export default function DriverDashboard() {
         const token = sessionStorage.getItem('authToken');
         const res = await fetch('http://localhost:3001/api/rides', { headers: { Authorization: `Bearer ${token}` } });
         const data = await res.json();
-        if (res.ok) setPendingRides(data);
-        else console.error('Failed to fetch rides:', data.error);
+        if (res.ok) setPendingRides(data.filter(ride => !ride.driver_assigned));
       } catch (err) {
         console.error('Error fetching rides:', err);
       }
@@ -75,7 +76,6 @@ export default function DriverDashboard() {
         });
         const data = await res.json();
         if (res.ok) setActiveRides(data);
-        else console.error('Failed to fetch active rides:', data.error);
       } catch (err) {
         console.error('Error fetching active rides:', err);
       }
@@ -83,70 +83,103 @@ export default function DriverDashboard() {
     fetchActiveRides();
   }, [driverInfo.email]);
 
-  // Socket.IO integration
+  // Socket listeners for real-time updates
   useEffect(() => {
-    const socket = io('http://localhost:3001');
+  if (!driverInfo.email) return;
 
-    socket.on('new-ride', ride => {
-      setPendingRides(prev => [ride, ...prev]);
-    });
-
-    socket.on('ride-updated', updatedRide => {
-      setPendingRides(prev => prev.filter(r => r.id !== updatedRide.id));
-      if (updatedRide.driver_email === driverInfo.email) {
-        setActiveRides(prev => [...prev, updatedRide]);
-      }
-    });
-
-    return () => {
-      socket.disconnect();
-    };
-  }, [driverInfo.email]);
-
-  const handleOpenDialog = ride => { setSelectedRide(ride); setOpenDialog(true); };
-  const handleCloseDialog = () => { setOpenDialog(false); setSelectedRide(null); };
-
-  const handleConfirmAccept = async () => {
-    if (!selectedRide) return;
+  const fetchRides = async () => {
     try {
       const token = sessionStorage.getItem('authToken');
 
-      const response = await fetch(`http://localhost:3001/api/rides/${selectedRide.id}/accept`, {
-        method: 'POST',
+      // Fetch available rides
+      const pendingRes = await fetch('http://localhost:3001/api/rides', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const pendingData = await pendingRes.json();
+      setPendingRides(pendingData.filter(ride => !ride.driver_assigned));
+
+      // Fetch active rides
+      const activeRes = await fetch(`http://localhost:3001/api/active-rides?driver_email=${driverInfo.email}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const activeData = await activeRes.json();
+      setActiveRides(activeData);
+
+    } catch (err) {
+      console.error('Error fetching rides:', err);
+    }
+  };
+
+  fetchRides(); // initial fetch
+  const interval = setInterval(fetchRides, 100); // repeat every 15 seconds
+
+  return () => clearInterval(interval);
+}, [driverInfo.email]);
+
+
+  const handleCancelRide = async (ride) => {
+    const confirmed = window.confirm(`Are you sure you want to cancel ride #${ride.id}?`);
+    if (!confirmed) return;
+
+    try {
+      const token = sessionStorage.getItem("authToken");
+      const res = await fetch(`http://localhost:3001/api/rides/${ride.id}/cancel`, {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to cancel ride");
+
+      setActiveRides(prev => prev.filter(r => r.id !== ride.id));
+    } catch (err) {
+      console.error("Cancel ride failed:", err.message);
+      alert(`Cancel ride failed: ${err.message}`);
+    }
+  };
+
+  const handleConfirmAccept = async () => {
+    if (!selectedRide) return;
+    const rideId = selectedRide.id || selectedRide._id;
+    if (!rideId) { alert("Invalid ride selected"); return; }
+
+    try {
+      const token = sessionStorage.getItem("authToken");
+      const response = await fetch(`http://localhost:3001/api/rides/${rideId}/accept`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(driverInfo),
       });
 
       const data = await response.json();
-
       if (!response.ok) {
-        if (response.status === 400 && data.error.includes('already accepted')) {
-          alert('This ride has already been accepted by another driver.');
-          setPendingRides(prev => prev.filter(r => r.id !== selectedRide.id));
+        if (response.status === 400 && data.error.includes("already accepted")) {
+          alert("This ride has already been accepted by another driver.");
+          setPendingRides(prev => prev.filter(r => (r.id || r._id) !== rideId));
           handleCloseDialog();
           return;
         }
-        throw new Error(data.error || 'Failed to accept ride');
+        throw new Error(data.error || "Failed to accept ride");
       }
 
-      // Success: update active rides
-      setPendingRides(prev => prev.filter(r => r.id !== selectedRide.id));
-      setActiveRides(prev => [
-        ...prev,
-        {
-          ...selectedRide,
-          driver_name: driverInfo.name,
-          driver_phone: driverInfo.phone,
-          driver_vehicle: driverInfo.vehicle,
-          driver_email: driverInfo.email,
-        }
-      ]);
+      const acceptedRide = {
+        ...selectedRide,
+        status: "accepted",
+        driver_name: driverInfo.name,
+        driver_phone: driverInfo.phone,
+        driver_vehicle: driverInfo.vehicle,
+        driver_email: driverInfo.email,
+      };
+
+      socket.emit("rideUpdated", acceptedRide);
+
+      setPendingRides(prev => prev.filter(r => (r.id || r._id) !== rideId));
+      setActiveRides(prev => [...prev, acceptedRide]);
 
       handleCloseDialog();
-
     } catch (error) {
       console.error("Accept ride failed:", error.message);
       alert(`Accept ride failed: ${error.message}`);
@@ -193,10 +226,9 @@ export default function DriverDashboard() {
         </Box>
 
         {/* Active Rides */}
-        <ActiveRides 
-          rides={activeRides.filter(
-            ride => ride.driver_email && ride.driver_email === driverInfo.email
-          )} 
+        <ActiveRides
+          rides={activeRides.filter(ride => ride.driver_email === driverInfo.email)}
+          onCancelRide={handleCancelRide}
         />
       </Box>
 
@@ -214,3 +246,4 @@ export default function DriverDashboard() {
     </Box>
   );
 }
+ 

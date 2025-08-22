@@ -16,7 +16,8 @@ export default function RecentRides({ userEmail }) {
 
     async function fetchRides() {
       try {
-        const res = await fetch(`http://localhost:3001/api/rides?email=${encodeURIComponent(userEmail)}`);
+       const res = await fetch(`http://localhost:3001/api/rides?passenger_email=${encodeURIComponent(userEmail)}`);
+
         const data = await res.json();
         setRides(data);
       } catch (err) {

@@ -10,6 +10,44 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+const http = require("http");
+const { Server } = require("socket.io");
+const server = http.createServer(app);
+
+const io = new Server(server, {
+  cors: {
+    origin: "http://localhost:3000", // React frontend
+    methods: ["GET", "POST"],
+  },
+});
+
+io.on("connection", (socket) => {
+  console.log("Client connected");
+
+  socket.on("joinRoom", (email) => {
+    socket.join(email);
+  });
+
+  socket.on("leaveRoom", (email) => {
+    socket.leave(email);
+  });
+
+  socket.on("newRide", (ride) => {
+    io.emit("newRide", ride); // broadcast to drivers
+  });
+
+  socket.on("rideUpdated", (ride) => {
+    io.emit("rideUpdated", ride); // update drivers
+    io.to(ride.passenger_email).emit("rideUpdated", ride); // notify passenger
+  });
+
+  socket.on("disconnect", () => {
+    console.log("Client disconnected");
+  });
+});
+
+server.listen(3001, () => console.log("Server running on port 3001"));
+
 // MySQL connection
 const db = mysql.createConnection({
   host: process.env.DB_HOST || 'localhost',
@@ -129,7 +167,7 @@ app.post('/api/users/login', (req, res) => {
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ error: 'Incorrect password' });
 
-    res.json({ id: user.id, role: user.role, firstName: user.first_name, email: user.email });
+    res.json({ id: user.id, role: user.role, firstName: user.first_name, email: user.email, phone: user.phone });
   });
 });
 
@@ -210,6 +248,50 @@ app.post('/api/rides/:rideId/accept', (req, res) => {
     });
   });
 });
+
+
+// In server.js
+app.post("/api/rides/:id/cancel", (req, res) => {
+  const rideId = req.params.id;
+
+  const query = `
+    UPDATE rides 
+    SET status = 'cancelled',
+        driver_assigned = 0,
+        driver_name = NULL,
+        driver_phone = NULL,
+        driver_vehicle = NULL,
+        driver_email = NULL
+    WHERE id = ?
+  `;
+
+  db.query(query, [rideId], (err, result) => {
+    if (err) {
+      console.error("Error cancelling ride:", err);
+      return res.status(500).json({ error: "Server error" });
+    }
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Ride not found" });
+    }
+
+    io.emit("rideUpdated", {
+      id: rideId,
+      status: "cancelled",
+      driver_assigned: 0,
+      driver_name: null,
+      driver_phone: null,
+      driver_vehicle: null,
+      driver_email: null,
+    });
+
+    res.json({ message: "Ride cancelled successfully", rideId });
+  });
+});
+
+
+
+
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -14,15 +14,16 @@ import {
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import RecentRides from './RecentRides';
-import { io } from 'socket.io-client';
+import socket from "./socket";
 
-// Initialize Socket.IO client
-const socket = io("http://localhost:3001"); // replace with your backend URL
+
 
 export default function PassengerDashboard() {
   const navigate = useNavigate();
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
+  const [recentRides, setRecentRides] = useState([]); // list of passenger rides
+
 
   // Form state
   const [passengerName, setPassengerName] = useState('');
@@ -48,7 +49,10 @@ export default function PassengerDashboard() {
           const data = await res.json();
           if (res.ok && data.email) {
             setPassengerEmail(data.email);
+              setPassengerName(data.name || '');     // add this
+             setPassengerPhone(data.phone || '');   // add this
             sessionStorage.setItem('userEmail', data.email);
+            
           }
         } catch (err) {
           console.error('Error fetching user email:', err);
@@ -57,28 +61,42 @@ export default function PassengerDashboard() {
       fetchUserEmail();
     }
   }, []);
+// Join private room for real-time updates
+useEffect(() => {
+  if (!passengerEmail) return;
 
-  // Join private room for real-time updates
-  useEffect(() => {
-    if (!passengerEmail) return;
+  // Join private room
+  socket.emit("joinRoom", passengerEmail);
 
-    socket.emit("joinRoom", passengerEmail);
+  const handleRideUpdate = (ride) => {
+    if (ride.passenger_email !== passengerEmail) return;
 
-    const handleRideUpdate = (rideData) => {
-      setSnackbar({
-        open: true,
-        message: `Ride Update: ${rideData.status}`,
-        severity: 'info',
-      });
-    };
+    // Update the recent rides state
+    setRecentRides(prev => {
+      const exists = prev.find(r => r.id === ride.id);
+      if (exists) {
+        return prev.map(r => r.id === ride.id ? ride : r);
+      } else {
+        return [ride, ...prev];
+      }
+    });
 
-    socket.on("rideUpdate", handleRideUpdate);
+    // Show snackbar
+    setSnackbar({
+      open: true,
+      message: `Ride Update: ${ride.status}`,
+      severity: 'info',
+    });
+  };
 
-    return () => {
-      socket.off("rideUpdate", handleRideUpdate);
-      socket.emit("leaveRoom", passengerEmail);
-    };
-  }, [passengerEmail]);
+  socket.on("rideUpdated", handleRideUpdate);
+
+  return () => {
+    socket.off("rideUpdated", handleRideUpdate);
+    socket.emit("leaveRoom", passengerEmail);
+  };
+}, [passengerEmail]);
+
 
   const handleChange = (setter) => (e) => setter(e.target.value);
   const handleRideTypeChange = (_, newType) => { if (newType) setRideType(newType); };
@@ -106,14 +124,17 @@ export default function PassengerDashboard() {
       setPickup('');
       setDropoff('');
       setRideType('economy');
+// On booking a ride
+socket.emit("newRide", {
+  id: data.id, // ride ID returned from backend
+  passenger_name: passengerName,
+  passenger_email: passengerEmail,
+  passenger_phone: passengerPhone,
+  pickup_location: pickup,
+  dropoff_location: dropoff,
+  ride_type: rideType,
+});
 
-      // Notify server about new ride
-      socket.emit("newRide", {
-        passengerEmail,
-        pickup,
-        dropoff,
-        rideType,
-      });
 
     } catch (error) {
       setSnackbar({ open: true, message: error.message, severity: 'error' });
@@ -141,8 +162,13 @@ export default function PassengerDashboard() {
       >
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <img src="/taxifav.png" alt="Taxi Icon" style={{ width: isDesktop ? 35 : 30, height: isDesktop ? 35 : 30, marginRight: 10 }} />
-          <span style={{ fontWeight: 'bold', fontSize: isDesktop ? '1.75rem' : '1.5rem' }}>SWYFT</span>
+          <span style={{ fontWeight: 'bold', fontSize: isDesktop ? '1.75rem' : '1.5rem' }}>SWYFT - Passenger Dashboard</span>
+          
         </Box>
+        <Typography variant="h6" gutterBottom sx={{ mt: 2, pl: isDesktop ? 5 : 3 }}>
+                  Welcome, {passengerName} ({passengerEmail}) : {passengerPhone}
+                </Typography>
+        
         {isDesktop && (
           <Button
             variant="contained"
@@ -175,6 +201,7 @@ export default function PassengerDashboard() {
           alignItems: isDesktop ? 'flex-start' : 'center',
         }}
       >
+        
         {/* Ride booking form */}
         <Container
           maxWidth="xs"
@@ -185,7 +212,9 @@ export default function PassengerDashboard() {
             width: '100%',
             maxWidth: 360,
           }}
+          
         >
+          
           <Typography variant={isDesktop ? "h5" : "h6"} align={isDesktop ? "left" : "center"} gutterBottom sx={{ fontWeight: 'bold' }}>
             Book a Ride
           </Typography>
@@ -223,6 +252,8 @@ export default function PassengerDashboard() {
 
         {/* Recent rides */}
         <RecentRides userEmail={passengerEmail} />
+
+        
       </Box>
     </>
   );
