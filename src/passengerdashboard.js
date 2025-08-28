@@ -11,21 +11,78 @@ import {
   Alert,
   useMediaQuery,
   useTheme,
+  List,
+  ListItem,
+  ListItemButton
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import RecentRides from './RecentRides';
 import socket from "./socket";
+import PassengerMap from './passengermap';
 
+// ------------------ LocationInput Component ------------------
+function LocationInput({ label, onSelect }) {
+  const [query, setQuery] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
 
+  useEffect(() => {
+    if (!query) return setSuggestions([]);
+    const service = new window.google.maps.places.AutocompleteService();
+    service.getPlacePredictions(
+      { input: query, location: new window.google.maps.LatLng(41.0082, 28.9784), radius: 5000 },
+      (predictions, status) => setSuggestions(status === 'OK' && predictions ? predictions : [])
+    );
+  }, [query]);
 
+  return (
+    <Box sx={{ position: 'relative', mb: 2 }}>
+      <TextField
+        fullWidth
+        label={label}
+        variant="outlined"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+      />
+      {suggestions.length > 0 && (
+        <List
+          sx={{
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            right: 0,
+            maxHeight: 200,
+            bgcolor: 'background.paper',
+            overflowY: 'auto',
+            border: '1px solid #ccc',
+            zIndex: 10,
+          }}
+        >
+          {suggestions.map((s) => (
+            <ListItem key={s.place_id} disablePadding>
+              <ListItemButton
+                onClick={() => {
+                  setQuery(s.description);
+                  setSuggestions([]);
+                  onSelect(s.description);
+                }}
+              >
+                {s.description}
+              </ListItemButton>
+            </ListItem>
+          ))}
+        </List>
+      )}
+    </Box>
+  );
+}
+
+// ------------------ PassengerDashboard Component ------------------
 export default function PassengerDashboard() {
   const navigate = useNavigate();
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
-  const [recentRides, setRecentRides] = useState([]); // list of passenger rides
+  const [recentRides, setRecentRides] = useState([]);
 
-
-  // Form state
   const [passengerName, setPassengerName] = useState('');
   const [passengerEmail, setPassengerEmail] = useState('');
   const [passengerPhone, setPassengerPhone] = useState('');
@@ -34,7 +91,6 @@ export default function PassengerDashboard() {
   const [rideType, setRideType] = useState('economy');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
-  // Prefill email from session or backend
   useEffect(() => {
     const savedEmail = sessionStorage.getItem('userEmail');
     if (savedEmail) {
@@ -49,10 +105,9 @@ export default function PassengerDashboard() {
           const data = await res.json();
           if (res.ok && data.email) {
             setPassengerEmail(data.email);
-              setPassengerName(data.name || '');     // add this
-             setPassengerPhone(data.phone || '');   // add this
+            setPassengerName(data.name || '');
+            setPassengerPhone(data.phone || '');
             sessionStorage.setItem('userEmail', data.email);
-            
           }
         } catch (err) {
           console.error('Error fetching user email:', err);
@@ -61,42 +116,24 @@ export default function PassengerDashboard() {
       fetchUserEmail();
     }
   }, []);
-// Join private room for real-time updates
-useEffect(() => {
-  if (!passengerEmail) return;
 
-  // Join private room
-  socket.emit("joinRoom", passengerEmail);
+  useEffect(() => {
+    if (!passengerEmail) return;
+    socket.emit("joinRoom", passengerEmail);
 
-  const handleRideUpdate = (ride) => {
-    if (ride.passenger_email !== passengerEmail) return;
+    const handleRideUpdate = (ride) => {
+      if (ride.passenger_email !== passengerEmail) return;
+      setRecentRides(prev => {
+        const exists = prev.find(r => r.id === ride.id);
+        if (exists) return prev.map(r => r.id === ride.id ? ride : r);
+        else return [ride, ...prev];
+      });
+      setSnackbar({ open: true, message: `Ride Update: ${ride.status}`, severity: 'info' });
+    };
 
-    // Update the recent rides state
-    setRecentRides(prev => {
-      const exists = prev.find(r => r.id === ride.id);
-      if (exists) {
-        return prev.map(r => r.id === ride.id ? ride : r);
-      } else {
-        return [ride, ...prev];
-      }
-    });
-
-    // Show snackbar
-    setSnackbar({
-      open: true,
-      message: `Ride Update: ${ride.status}`,
-      severity: 'info',
-    });
-  };
-
-  socket.on("rideUpdated", handleRideUpdate);
-
-  return () => {
-    socket.off("rideUpdated", handleRideUpdate);
-    socket.emit("leaveRoom", passengerEmail);
-  };
-}, [passengerEmail]);
-
+    socket.on("rideUpdated", handleRideUpdate);
+    return () => { socket.off("rideUpdated", handleRideUpdate); socket.emit("leaveRoom", passengerEmail); };
+  }, [passengerEmail]);
 
   const handleChange = (setter) => (e) => setter(e.target.value);
   const handleRideTypeChange = (_, newType) => { if (newType) setRideType(newType); };
@@ -112,118 +149,54 @@ useEffect(() => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ passengerName, passengerEmail, passengerPhone, pickup, dropoff, rideType }),
       });
-
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Booking failed');
 
       setSnackbar({ open: true, message: data.message, severity: 'success' });
+      setPassengerName(''); setPassengerPhone(''); setPickup(''); setDropoff(''); setRideType('economy');
 
-      // Reset form (keep email)
-      setPassengerName('');
-      setPassengerPhone('');
-      setPickup('');
-      setDropoff('');
-      setRideType('economy');
-// On booking a ride
-socket.emit("newRide", {
-  id: data.id, // ride ID returned from backend
-  passenger_name: passengerName,
-  passenger_email: passengerEmail,
-  passenger_phone: passengerPhone,
-  pickup_location: pickup,
-  dropoff_location: dropoff,
-  ride_type: rideType,
-});
-
-
+      socket.emit("newRide", {
+        id: data.id,
+        passenger_name: passengerName,
+        passenger_email: passengerEmail,
+        passenger_phone: passengerPhone,
+        pickup_location: pickup,
+        dropoff_location: dropoff,
+        ride_type: rideType,
+      });
     } catch (error) {
       setSnackbar({ open: true, message: error.message, severity: 'error' });
     }
   };
 
-  const onSnackbarClose = () => setSnackbar((prev) => ({ ...prev, open: false }));
+  const onSnackbarClose = () => setSnackbar(prev => ({ ...prev, open: false }));
 
   return (
     <>
       {/* Header */}
-      <Box
-        sx={{
-          bgcolor: '#82b1ff',
-          color: 'white',
-          p: 2,
-          textAlign: 'left',
-          fontWeight: 'bold',
-          fontSize: isDesktop ? '1.5rem' : '1.25rem',
-          pl: isDesktop ? '50px' : '20px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: isDesktop ? 'space-between' : 'flex-start',
-        }}
-      >
+      <Box sx={{ bgcolor: '#82b1ff', color: 'white', p: 2, textAlign: 'left', fontWeight: 'bold', fontSize: isDesktop ? '1.5rem' : '1.25rem', pl: isDesktop ? '50px' : '20px', display: 'flex', alignItems: 'center', justifyContent: isDesktop ? 'space-between' : 'flex-start' }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <img src="/taxifav.png" alt="Taxi Icon" style={{ width: isDesktop ? 35 : 30, height: isDesktop ? 35 : 30, marginRight: 10 }} />
           <span style={{ fontWeight: 'bold', fontSize: isDesktop ? '1.75rem' : '1.5rem' }}>SWYFT - Passenger Dashboard</span>
-          
         </Box>
         <Typography variant="h6" gutterBottom sx={{ mt: 2, pl: isDesktop ? 5 : 3 }}>
-                  Welcome, {passengerName} ({passengerEmail}) : {passengerPhone}
-                </Typography>
-        
-        {isDesktop && (
-          <Button
-            variant="contained"
-            color="secondary"
-            onClick={() => navigate('/')}
-            sx={{
-              mr: 15,
-              borderRadius: '15px',
-              backgroundColor: '#ffffff',
-              fontWeight: 'bold',
-              padding: '10px 24px',
-              color: '#000000',
-              '&:hover': { backgroundColor: '#f0f0f0' },
-            }}
-          >
-            Home
-          </Button>
-        )}
+          Welcome, {passengerName} ({passengerEmail}) : {passengerPhone}
+        </Typography>
+        {isDesktop && <Button variant="contained" color="secondary" onClick={() => navigate('/')} sx={{ mr: 15, borderRadius: '15px', backgroundColor: '#ffffff', fontWeight: 'bold', padding: '10px 24px', color: '#000000', '&:hover': { backgroundColor: '#f0f0f0' } }}>Home</Button>}
       </Box>
 
       {/* Main content */}
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: isDesktop ? 'row' : 'column',
-          justifyContent: 'center',
-          mt: 2,
-          px: isDesktop ? 7 : 2,
-          gap: 3,
-          alignItems: isDesktop ? 'flex-start' : 'center',
-        }}
-      >
-        
+      <Box sx={{ display: 'flex', flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'center', mt: 2, px: isDesktop ? 7 : 2, gap: 3, alignItems: isDesktop ? 'flex-start' : 'center' }}>
         {/* Ride booking form */}
-        <Container
-          maxWidth="xs"
-          sx={{
-            p: 4,
-            border: '1px solid #ccc',
-            borderRadius: 3,
-            width: '100%',
-            maxWidth: 360,
-          }}
-          
-        >
-          
-          <Typography variant={isDesktop ? "h5" : "h6"} align={isDesktop ? "left" : "center"} gutterBottom sx={{ fontWeight: 'bold' }}>
-            Book a Ride
-          </Typography>
-
+        <Container maxWidth="xs" sx={{ p: 4, border: '1px solid #ccc', borderRadius: 3, width: '100%', maxWidth: 360 }}>
+          <Typography variant={isDesktop ? "h5" : "h6"} align={isDesktop ? "left" : "center"} gutterBottom sx={{ fontWeight: 'bold' }}>Book a Ride</Typography>
           <TextField fullWidth label="Passenger Name" margin="normal" value={passengerName} onChange={handleChange(setPassengerName)} />
           <TextField fullWidth label="Passenger Email" margin="normal" value={passengerEmail} disabled />
           <TextField fullWidth label="Passenger Phone" margin="normal" value={passengerPhone} onChange={handleChange(setPassengerPhone)} />
-          <TextField fullWidth label="Pickup Location" margin="normal" value={pickup} onChange={handleChange(setPickup)} />
-          <TextField fullWidth label="Drop-off Location" margin="normal" value={dropoff} onChange={handleChange(setDropoff)} />
+
+          {/* Google Maps Autocomplete */}
+          <LocationInput label="Pickup Location" onSelect={(address) => setPickup(address)} />
+          <LocationInput label="Drop-off Location" onSelect={(address) => setDropoff(address)} />
 
           <Box sx={{ my: isDesktop ? 3 : 2, display: 'flex', justifyContent: 'center' }}>
             <ToggleButtonGroup value={rideType} exclusive onChange={handleRideTypeChange}>
@@ -233,27 +206,22 @@ socket.emit("newRide", {
             </ToggleButtonGroup>
           </Box>
 
-          <Button
-            variant="contained"
-            fullWidth
-            size="large"
-            onClick={onBookClick}
-            sx={{ bgcolor: '#82b1ff', '&:hover': { bgcolor: '#5a8de0' } }}
-          >
-            Book Ride
-          </Button>
+          <Button variant="contained" fullWidth size="large" onClick={onBookClick} sx={{ bgcolor: '#82b1ff', '&:hover': { bgcolor: '#5a8de0' } }}>Book Ride</Button>
 
           <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={onSnackbarClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-            <Alert onClose={onSnackbarClose} severity={snackbar.severity} sx={{ width: '100%' }}>
-              {snackbar.message}
-            </Alert>
+            <Alert onClose={onSnackbarClose} severity={snackbar.severity} sx={{ width: '100%' }}>{snackbar.message}</Alert>
           </Snackbar>
         </Container>
 
+        {/* Passenger Map */}
+        <PassengerMap
+          passengerEmail={passengerEmail}
+          pickupLocation={pickup ? { address: pickup } : null}
+          dropoffLocation={dropoff ? { address: dropoff } : null}
+        />
+
         {/* Recent rides */}
         <RecentRides userEmail={passengerEmail} />
-
-        
       </Box>
     </>
   );

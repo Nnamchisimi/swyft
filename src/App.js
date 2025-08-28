@@ -6,6 +6,8 @@ import SignIn from './signin'; // your lowercase file
 import GetStarted from './getstarted';
 import DriverDashboard from './driverdashboard';
 import VerifyEmail from "./VerifyEmail";
+import 'leaflet/dist/leaflet.css';
+
 
 
 function App() {
