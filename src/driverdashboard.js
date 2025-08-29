@@ -4,6 +4,7 @@ import { Box, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActi
 import { useNavigate } from 'react-router-dom';
 import ActiveRides from './activerides';
 import axios from 'axios';
+import DriverMap from './driverMap';
 
 export default function DriverDashboard() {
   const navigate = useNavigate();
@@ -48,74 +49,36 @@ export default function DriverDashboard() {
       .catch(err => console.error('Error fetching drivers:', err));
   }, []);
 
-  // Fetch available rides
+  // Fetch rides
   useEffect(() => {
     const fetchRides = async () => {
       try {
         const token = sessionStorage.getItem('authToken');
-        const res = await fetch('http://localhost:3001/api/rides', { headers: { Authorization: `Bearer ${token}` } });
-        const data = await res.json();
-        if (res.ok) setPendingRides(data.filter(ride => !ride.driver_assigned));
+
+        // Pending rides
+        const pendingRes = await fetch('http://localhost:3001/api/rides', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const pendingData = await pendingRes.json();
+        setPendingRides(pendingData.filter(ride => !ride.driver_assigned));
+
+        // Active rides
+        if (driverInfo.email) {
+          const activeRes = await fetch(`http://localhost:3001/api/active-rides?driver_email=${driverInfo.email}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const activeData = await activeRes.json();
+          setActiveRides(activeData);
+        }
       } catch (err) {
         console.error('Error fetching rides:', err);
       }
     };
+
     fetchRides();
-  }, []);
-
-  // Fetch active rides for this driver
-  useEffect(() => {
-    const fetchActiveRides = async () => {
-      try {
-        const token = sessionStorage.getItem('authToken');
-        const driverEmail = driverInfo.email;
-        if (!driverEmail) return;
-
-        const res = await fetch(`http://localhost:3001/api/active-rides?driver_email=${driverEmail}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        if (res.ok) setActiveRides(data);
-      } catch (err) {
-        console.error('Error fetching active rides:', err);
-      }
-    };
-    fetchActiveRides();
+    const interval = setInterval(fetchRides, 15000); // 15s
+    return () => clearInterval(interval);
   }, [driverInfo.email]);
-
-  // Socket listeners for real-time updates
-  useEffect(() => {
-  if (!driverInfo.email) return;
-
-  const fetchRides = async () => {
-    try {
-      const token = sessionStorage.getItem('authToken');
-
-      // Fetch available rides
-      const pendingRes = await fetch('http://localhost:3001/api/rides', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const pendingData = await pendingRes.json();
-      setPendingRides(pendingData.filter(ride => !ride.driver_assigned));
-
-      // Fetch active rides
-      const activeRes = await fetch(`http://localhost:3001/api/active-rides?driver_email=${driverInfo.email}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const activeData = await activeRes.json();
-      setActiveRides(activeData);
-
-    } catch (err) {
-      console.error('Error fetching rides:', err);
-    }
-  };
-
-  fetchRides(); // initial fetch
-  const interval = setInterval(fetchRides, 100); // repeat every 15 seconds
-
-  return () => clearInterval(interval);
-}, [driverInfo.email]);
-
 
   const handleCancelRide = async (ride) => {
     const confirmed = window.confirm(`Are you sure you want to cancel ride #${ride.id}?`);
@@ -125,15 +88,10 @@ export default function DriverDashboard() {
       const token = sessionStorage.getItem("authToken");
       const res = await fetch(`http://localhost:3001/api/rides/${ride.id}/cancel`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       });
-
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to cancel ride");
-
       setActiveRides(prev => prev.filter(r => r.id !== ride.id));
     } catch (err) {
       console.error("Cancel ride failed:", err.message);
@@ -153,7 +111,6 @@ export default function DriverDashboard() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(driverInfo),
       });
-
       const data = await response.json();
       if (!response.ok) {
         if (response.status === 400 && data.error.includes("already accepted")) {
@@ -165,20 +122,11 @@ export default function DriverDashboard() {
         throw new Error(data.error || "Failed to accept ride");
       }
 
-      const acceptedRide = {
-        ...selectedRide,
-        status: "accepted",
-        driver_name: driverInfo.name,
-        driver_phone: driverInfo.phone,
-        driver_vehicle: driverInfo.vehicle,
-        driver_email: driverInfo.email,
-      };
-
+      const acceptedRide = { ...selectedRide, status: "accepted", driver_name: driverInfo.name, driver_phone: driverInfo.phone, driver_vehicle: driverInfo.vehicle, driver_email: driverInfo.email };
       socket.emit("rideUpdated", acceptedRide);
 
       setPendingRides(prev => prev.filter(r => (r.id || r._id) !== rideId));
       setActiveRides(prev => [...prev, acceptedRide]);
-
       handleCloseDialog();
     } catch (error) {
       console.error("Accept ride failed:", error.message);
@@ -225,6 +173,9 @@ export default function DriverDashboard() {
           </Box>
         </Box>
 
+        {/* Driver Map */}
+        <DriverMap ride={activeRides[0]} />
+
         {/* Active Rides */}
         <ActiveRides
           rides={activeRides.filter(ride => ride.driver_email === driverInfo.email)}
@@ -246,4 +197,3 @@ export default function DriverDashboard() {
     </Box>
   );
 }
- 

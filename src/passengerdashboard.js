@@ -21,9 +21,13 @@ import socket from "./socket";
 import PassengerMap from './passengermap';
 
 // ------------------ LocationInput Component ------------------
-function LocationInput({ label, onSelect }) {
-  const [query, setQuery] = useState('');
+function LocationInput({ label, onSelect, value }) {
+  const [query, setQuery] = useState(value || '');
   const [suggestions, setSuggestions] = useState([]);
+
+  useEffect(() => {
+    setQuery(value || '');
+  }, [value]);
 
   useEffect(() => {
     if (!query) return setSuggestions([]);
@@ -81,8 +85,8 @@ export default function PassengerDashboard() {
   const navigate = useNavigate();
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
-  const [recentRides, setRecentRides] = useState([]);
 
+  const [recentRides, setRecentRides] = useState([]);
   const [passengerName, setPassengerName] = useState('');
   const [passengerEmail, setPassengerEmail] = useState('');
   const [passengerPhone, setPassengerPhone] = useState('');
@@ -90,12 +94,14 @@ export default function PassengerDashboard() {
   const [dropoff, setDropoff] = useState('');
   const [rideType, setRideType] = useState('economy');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [selectedRide, setSelectedRide] = useState(null); // currently tracked ride
+  const [rideBooked, setRideBooked] = useState(false); // triggers map reset
 
+  // Fetch user email & info
   useEffect(() => {
     const savedEmail = sessionStorage.getItem('userEmail');
-    if (savedEmail) {
-      setPassengerEmail(savedEmail);
-    } else {
+    if (savedEmail) setPassengerEmail(savedEmail);
+    else {
       async function fetchUserEmail() {
         try {
           const token = sessionStorage.getItem('authToken');
@@ -110,34 +116,48 @@ export default function PassengerDashboard() {
             sessionStorage.setItem('userEmail', data.email);
           }
         } catch (err) {
-          console.error('Error fetching user email:', err);
+          console.error(err);
         }
       }
       fetchUserEmail();
     }
   }, []);
 
+  // Listen for ride updates
   useEffect(() => {
     if (!passengerEmail) return;
     socket.emit("joinRoom", passengerEmail);
 
     const handleRideUpdate = (ride) => {
       if (ride.passenger_email !== passengerEmail) return;
+
       setRecentRides(prev => {
         const exists = prev.find(r => r.id === ride.id);
         if (exists) return prev.map(r => r.id === ride.id ? ride : r);
         else return [ride, ...prev];
       });
+
+      // Track only accepted or in-progress rides
+      if (["accepted", "in_progress"].includes(ride.status)) {
+        setSelectedRide(ride);
+      } else if (selectedRide?.id === ride.id && ride.status === "completed") {
+        setSelectedRide(null);
+      }
+
       setSnackbar({ open: true, message: `Ride Update: ${ride.status}`, severity: 'info' });
     };
 
     socket.on("rideUpdated", handleRideUpdate);
-    return () => { socket.off("rideUpdated", handleRideUpdate); socket.emit("leaveRoom", passengerEmail); };
-  }, [passengerEmail]);
+    return () => {
+      socket.off("rideUpdated", handleRideUpdate);
+      socket.emit("leaveRoom", passengerEmail);
+    };
+  }, [passengerEmail, selectedRide]);
 
   const handleChange = (setter) => (e) => setter(e.target.value);
   const handleRideTypeChange = (_, newType) => { if (newType) setRideType(newType); };
 
+  // Handle ride booking
   const onBookClick = async () => {
     if (!passengerName || !passengerEmail || !passengerPhone || !pickup || !dropoff) {
       setSnackbar({ open: true, message: 'Please fill all fields', severity: 'error' });
@@ -153,10 +173,17 @@ export default function PassengerDashboard() {
       if (!response.ok) throw new Error(data.error || 'Booking failed');
 
       setSnackbar({ open: true, message: data.message, severity: 'success' });
-      setPassengerName(''); setPassengerPhone(''); setPickup(''); setDropoff(''); setRideType('economy');
+
+      // Reset fields
+      setPassengerName('');
+      setPassengerPhone('');
+      setPickup('');
+      setDropoff('');
+      setRideType('economy');
+      setRideBooked(true);
 
       socket.emit("newRide", {
-        id: data.id,
+        id: data.rideId,
         passenger_name: passengerName,
         passenger_email: passengerEmail,
         passenger_phone: passengerPhone,
@@ -194,9 +221,8 @@ export default function PassengerDashboard() {
           <TextField fullWidth label="Passenger Email" margin="normal" value={passengerEmail} disabled />
           <TextField fullWidth label="Passenger Phone" margin="normal" value={passengerPhone} onChange={handleChange(setPassengerPhone)} />
 
-          {/* Google Maps Autocomplete */}
-          <LocationInput label="Pickup Location" onSelect={(address) => setPickup(address)} />
-          <LocationInput label="Drop-off Location" onSelect={(address) => setDropoff(address)} />
+          <LocationInput label="Pickup Location" value={pickup} onSelect={(address) => setPickup(address)} />
+          <LocationInput label="Drop-off Location" value={dropoff} onSelect={(address) => setDropoff(address)} />
 
           <Box sx={{ my: isDesktop ? 3 : 2, display: 'flex', justifyContent: 'center' }}>
             <ToggleButtonGroup value={rideType} exclusive onChange={handleRideTypeChange}>
@@ -213,11 +239,14 @@ export default function PassengerDashboard() {
           </Snackbar>
         </Container>
 
-        {/* Passenger Map */}
+        {/* Passenger Map with real-time driver */}
         <PassengerMap
           passengerEmail={passengerEmail}
           pickupLocation={pickup ? { address: pickup } : null}
           dropoffLocation={dropoff ? { address: dropoff } : null}
+          ride={selectedRide}
+          rideId={selectedRide?.id || null}
+          rideBooked={rideBooked}
         />
 
         {/* Recent rides */}

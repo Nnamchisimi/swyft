@@ -225,6 +225,7 @@ app.post('/api/rides', (req, res) => {
   });
 });
 
+
 // Accept ride
 app.post('/api/rides/:rideId/accept', (req, res) => {
   const rideId = req.params.rideId;
@@ -248,6 +249,92 @@ app.post('/api/rides/:rideId/accept', (req, res) => {
     });
   });
 });
+
+app.post("/api/rides/:id/driver-location", (req,res)=>{
+  const rideId = req.params.id;
+  const{lat,lng}= req.body;
+
+  if(lat==null||lng==null)
+  {
+    return  res.status(400).json({error: "longitude and lattitude are required"})
+  }
+  const query=`
+      UPDATE rides
+      SET driver_lat= ?, driver_lng=?
+      WHERE id= ? AND driver_assigned=1 AND status IN ('accepted', 'in_progress')
+        `;
+  db.query (query,[lat,lng, rideID],(err,result)=>{
+    if(err) return res.status(500).json({error:"Server error"});
+    if(result.affectedRows===0)return res.status(400).json({error:"cannot update location"});
+
+ 
+    db.query("SELECT passenger_email FROM rides WHERE id= ?", [rideId], (err2, results) => {
+      if(!err2 && results[0]){
+        const passengerEmail= results[0].passenger_email;
+        io.to(passengerEmail).emit("driverLocationUpdated",{rideId,lat, lng});
+      }
+
+    });
+    io.emit("driverLocationUpdated",{rideId,lat,lng});
+    res.json({message:"Driver location Updated",rideId});
+  });
+
+});
+
+// Start a ride (driver begins trip)
+app.post("/api/rides/:id/start", (req, res) => {
+  const rideId = req.params.id;
+
+  const query = `
+    UPDATE rides
+    SET status = 'in_progress'
+    WHERE id = ? AND driver_assigned = 1 AND status = 'accepted'
+  `;
+
+  db.query(query, [rideId], (err, result) => {
+    if (err) return res.status(500).json({ error: "Server error" });
+    if (result.affectedRows === 0) return res.status(400).json({ error: "Cannot start ride" });
+
+    io.emit("rideUpdated", { id: rideId, status: "in_progress" }); // update drivers
+    // Notify passenger
+    db.query("SELECT passenger_email FROM rides WHERE id = ?", [rideId], (err2, results) => {
+      if (!err2 && results[0]) {
+        io.to(results[0].passenger_email).emit("rideUpdated", { id: rideId, status: "in_progress" });
+      }
+    });
+
+    res.json({ message: "Ride started", rideId });
+  });
+});
+
+
+
+// Complete a ride
+app.post("/api/rides/:id/complete", (req, res) => {
+  const rideId = req.params.id;
+
+  const query = `
+    UPDATE rides
+    SET status = 'completed'
+    WHERE id = ? AND status = 'in_progress'
+  `;
+
+  db.query(query, [rideId], (err, result) => {
+    if (err) return res.status(500).json({ error: "Server error" });
+    if (result.affectedRows === 0) return res.status(400).json({ error: "Cannot complete ride" });
+
+    io.emit("rideUpdated", { id: rideId, status: "completed" });
+    // Notify passenger
+    db.query("SELECT passenger_email FROM rides WHERE id = ?", [rideId], (err2, results) => {
+      if (!err2 && results[0]) {
+        io.to(results[0].passenger_email).emit("rideUpdated", { id: rideId, status: "completed" });
+      }
+    });
+
+    res.json({ message: "Ride completed", rideId });
+  });
+});
+
 
 
 // In server.js
