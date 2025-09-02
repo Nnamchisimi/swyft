@@ -5,7 +5,7 @@ import RideBookingViewDesktop from './passengerdashboard';
 import SignIn from './signin'; // your lowercase file
 import GetStarted from './getstarted';
 import DriverDashboard from './driverdashboard';
-import VerifyEmail from "./VerifyEmail";
+
 import 'leaflet/dist/leaflet.css';
 
 
@@ -19,7 +19,7 @@ function App() {
         <Route path="/signin" element={<SignIn />} />
         <Route path="/getstarted" element={<GetStarted />} />
         <Route path="/driver" element={<DriverDashboard />} />
-         <Route path="/verify" element={<VerifyEmail />} />
+      
 
       </Routes>
     </Router>
