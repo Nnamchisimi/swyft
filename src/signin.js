@@ -12,58 +12,47 @@ export default function SignIn() {
   const [loading, setLoading] = useState(false);
   const isMobile = useMediaQuery('(max-width:600px)');
 
+  // Dynamically set API URL
+  const API_URL = process.env.REACT_APP_API_URL || 
+                  (window.location.hostname === 'localhost' 
+                    ? 'http://localhost:3001/api/users' 
+                    : '/api/users');
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      const response = await axios.post('http://localhost:3001/api/users/login', {
-        email,
-        password,
-      });
-
+      const response = await axios.post(`${API_URL}/login`, { email, password });
       const user = response.data;
 
       // Save auth token
-      if (user.token) {
-        sessionStorage.setItem('authToken', user.token);
-      }
+      if (user.token) sessionStorage.setItem('authToken', user.token);
 
-      // Save email (supports both { email } and { user: { email } })
+      // Save email
       const savedEmail = user.email || user.user?.email;
-      if (savedEmail) {
-        sessionStorage.setItem('userEmail', savedEmail);
-      }
+      if (savedEmail) sessionStorage.setItem('userEmail', savedEmail);
 
-    const driverData = {
-  name: user.name || (user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : user.user?.name),
-  email: user.email || user.user?.email,
-  phone: user.phone || user.user?.phone,
-  vehicle: user.vehicle || user.user?.vehicle,
-};
-
-sessionStorage.setItem('driverInfo', JSON.stringify(driverData));
-
-
+      // Save driver info
+      const driverData = {
+        name: user.name || (user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : user.user?.name),
+        email: user.email || user.user?.email,
+        phone: user.phone || user.user?.phone,
+        vehicle: user.vehicle || user.user?.vehicle,
+      };
+      sessionStorage.setItem('driverInfo', JSON.stringify(driverData));
 
       // Redirect based on role
       const role = user.role || user.user?.role;
-      if (role === 'Passenger') {
-        navigate('/ride-booking');
-      } else if (role === 'Driver') {
-        navigate('/driver');
-      } else {
-        setError('Unknown user role');
-      }
+      if (role === 'Passenger') navigate('/ride-booking');
+      else if (role === 'Driver') navigate('/driver');
+      else setError('Unknown user role');
 
     } catch (err) {
       console.error(err);
-      if (err.response) {
-        setError(err.response.data.error || 'Login failed');
-      } else {
-        setError('Server error');
-      }
+      if (err.response) setError(err.response.data.error || 'Login failed');
+      else setError('Server error');
     } finally {
       setLoading(false);
     }
