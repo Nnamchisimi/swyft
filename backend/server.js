@@ -16,7 +16,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000", // React frontend
+    origin: "http://localhost:3003", // React frontend
     methods: ["GET", "POST"],
   },
 });
@@ -144,7 +144,7 @@ app.get('/api/users/verify', (req, res) => {
         if (err2) return res.send('<h3>Failed to verify email</h3>');
 
         db.query('DELETE FROM email_verification_tokens WHERE token = ?', [token]);
-        res.redirect('http://localhost:3000/signin');
+        res.redirect('http://localhost:3003/signin');
       });
     });
   } catch {
