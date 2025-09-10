@@ -1,13 +1,33 @@
 import React, { useState } from 'react';
-import { Box, Button, Container, TextField, Typography, Link, CircularProgress } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
-import { useLocation } from 'react-router-dom';
+import {
+  Box,
+  Button,
+  Container,
+  TextField,
+  Typography,
+  Link,
+  CircularProgress,
+  IconButton,
+  Drawer,
+  List,
+  ListItem,
+} from '@mui/material';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import MenuIcon from '@mui/icons-material/Menu';
+import HomeIcon from '@mui/icons-material/Home';
+import LoginIcon from '@mui/icons-material/Login';
+import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 
 export default function GetStarted() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [userType, setUserType] = useState(location.state?.defaultUserType || '');
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
 
+  const [userType, setUserType] = useState(location.state?.defaultUserType || '');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -15,6 +35,8 @@ export default function GetStarted() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [vehiclePlate, setVehiclePlate] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const toggleDrawer = (open) => () => setDrawerOpen(open);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -36,7 +58,7 @@ export default function GetStarted() {
       password,
       role: userType,
       phone: phoneNumber.trim() || null,
-      vehiclePlate: userType === 'Driver' ? vehiclePlate.trim() : null
+      vehiclePlate: userType === 'Driver' ? vehiclePlate.trim() : null,
     };
 
     try {
@@ -45,12 +67,11 @@ export default function GetStarted() {
       const res = await fetch('http://localhost:3001/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newUser)
+        body: JSON.stringify(newUser),
       });
 
-      const data = await res.json();      
-        localStorage.setItem('token', data.token); // optional
-
+      const data = await res.json();
+      localStorage.setItem('token', data.token); // optional
 
       if (!res.ok) {
         if (data.error === 'Email already exists') {
@@ -62,8 +83,6 @@ export default function GetStarted() {
         return;
       }
 
-      // ✅ Success: show email verification message
-      console.log('Account created:', data);
       alert('Account created! Please check your email to verify your account before signing in.');
       navigate('/signin');
     } catch (err) {
@@ -83,16 +102,15 @@ export default function GetStarted() {
           bgcolor: '#82b1ff',
           color: 'white',
           p: 2,
-          textAlign: 'left',
           fontWeight: 'bold',
           fontSize: '1.5rem',
           pl: { xs: 2, sm: '50px' },
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          flexWrap: 'wrap'
         }}
       >
+        {/* Logo + Brand */}
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Box
             component="img"
@@ -107,33 +125,61 @@ export default function GetStarted() {
             SWYFT
           </Box>
         </Box>
-        <Box
-          sx={{
-            display: 'flex',
-            gap: 2,
-            flexDirection: { xs: 'column', sm: 'row' },
-            alignItems: 'center',
-            mr: { xs: 0, sm: 15 },
-            mt: { xs: 2, sm: 0 }
-          }}
-        >
-          <Button
-            variant="outlined"
-            onClick={() => navigate('/')}
-            sx={{
-              borderRadius: '15px',
-              borderColor: '#ffffff',
-              color: '#ffffff',
-              fontWeight: 'bold',
-              px: { xs: 2, sm: 3 },
-              py: { xs: 1, sm: 1.25 },
-              '&:hover': { backgroundColor: 'rgba(255,255,255,0.15)', borderColor: '#ffffff' }
-            }}
-          >
-            Home
-          </Button>
-        </Box>
+
+        {/* Desktop Buttons */}
+        {isDesktop && (
+          <Box sx={{ display: 'flex', gap: 2, mr: { sm: 15 } }}>
+            <Button
+              variant="outlined"
+              onClick={() => navigate('/')}
+              sx={{
+                borderRadius: '15px',
+                borderColor: '#ffffff',
+                color: '#ffffff',
+                fontWeight: 'bold',
+                px: { xs: 2, sm: 3 },
+                py: { xs: 1, sm: 1.25 },
+                '&:hover': {
+                  backgroundColor: 'rgba(255,255,255,0.15)',
+                  borderColor: '#ffffff',
+                },
+              }}
+            >
+              Home
+            </Button>
+          </Box>
+        )}
+
+        {/* Mobile Hamburger */}
+        {!isDesktop && (
+          <IconButton color="inherit" sx={{ ml: 'auto' }} onClick={toggleDrawer(true)}>
+            <MenuIcon />
+          </IconButton>
+        )}
       </Box>
+
+      {/* Mobile Drawer */}
+      <Drawer anchor="right" open={drawerOpen} onClose={toggleDrawer(false)}>
+        <Box sx={{ width: 250 }} role="presentation" onClick={toggleDrawer(false)}>
+          <List>
+            <ListItem disablePadding>
+              <Button fullWidth startIcon={<HomeIcon />} onClick={() => navigate('/')}>
+                Home
+              </Button>
+            </ListItem>
+            <ListItem disablePadding>
+              <Button fullWidth startIcon={<RocketLaunchIcon />} onClick={() => navigate('/getstarted')}>
+                Get Started
+              </Button>
+            </ListItem>
+            <ListItem disablePadding>
+              <Button fullWidth startIcon={<LoginIcon />} onClick={() => navigate('/signin')}>
+                Sign In
+              </Button>
+            </ListItem>
+          </List>
+        </Box>
+      </Drawer>
 
       {/* User Type Selector */}
       <Container
@@ -163,8 +209,8 @@ export default function GetStarted() {
               py: 1.25,
               '&:hover': {
                 backgroundColor: userType === 'Passenger' ? '#5e97f6' : 'rgba(130,177,255,0.15)',
-                borderColor: '#82b1ff'
-              }
+                borderColor: '#82b1ff',
+              },
             }}
           >
             Passenger
@@ -182,8 +228,8 @@ export default function GetStarted() {
               py: 1.25,
               '&:hover': {
                 backgroundColor: userType === 'Driver' ? '#5e97f6' : 'rgba(130,177,255,0.15)',
-                borderColor: '#82b1ff'
-              }
+                borderColor: '#82b1ff',
+              },
             }}
           >
             Driver
@@ -202,52 +248,14 @@ export default function GetStarted() {
             onSubmit={handleSubmit}
             sx={{ mt: 2, width: '100%', display: 'flex', flexDirection: 'column', gap: 2 }}
           >
-            <TextField
-              label="First Name"
-              fullWidth
-              required
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-            />
-            <TextField
-              label="Last Name"
-              fullWidth
-              required
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-            />
-            <TextField
-              label="Email"
-              type="email"
-              fullWidth
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            <TextField
-              label="Phone Number (optional)"
-              type="tel"
-              fullWidth
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-            />
+            <TextField label="First Name" fullWidth required value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+            <TextField label="Last Name" fullWidth required value={lastName} onChange={(e) => setLastName(e.target.value)} />
+            <TextField label="Email" type="email" fullWidth required value={email} onChange={(e) => setEmail(e.target.value)} />
+            <TextField label="Phone Number (optional)" type="tel" fullWidth value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} />
             {userType === 'Driver' && (
-              <TextField
-                label="Vehicle Plate"
-                fullWidth
-                required
-                value={vehiclePlate}
-                onChange={(e) => setVehiclePlate(e.target.value)}
-              />
+              <TextField label="Vehicle Plate" fullWidth required value={vehiclePlate} onChange={(e) => setVehiclePlate(e.target.value)} />
             )}
-            <TextField
-              label="Password"
-              type="password"
-              fullWidth
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <TextField label="Password" type="password" fullWidth required value={password} onChange={(e) => setPassword(e.target.value)} />
 
             <Button
               type="submit"
@@ -259,7 +267,7 @@ export default function GetStarted() {
                 backgroundColor: '#82b1ff',
                 fontWeight: 'bold',
                 py: 1.25,
-                '&:hover': { backgroundColor: '#5e97f6' }
+                '&:hover': { backgroundColor: '#5e97f6' },
               }}
             >
               {loading ? <CircularProgress size={24} sx={{ color: '#fff' }} /> : 'Create Account'}
@@ -267,11 +275,7 @@ export default function GetStarted() {
 
             <Typography variant="body2" textAlign="center">
               Already have an account?{' '}
-              <Link
-                component="button"
-                onClick={() => navigate('/signin')}
-                sx={{ color: '#82b1ff', fontWeight: 'bold' }}
-              >
+              <Link component="button" onClick={() => navigate('/signin')} sx={{ color: '#82b1ff', fontWeight: 'bold' }}>
                 Sign In
               </Link>
             </Typography>

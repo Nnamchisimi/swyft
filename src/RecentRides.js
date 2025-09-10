@@ -99,7 +99,7 @@ export default function RecentRides({ userEmail }) {
               <ListItem alignItems="flex-start">
                 <ListItemText
                   primary={`${ride.passenger_name} (${ride.ride_type})`}
-                  secondary={`${ride.pickup_location} → ${ride.dropoff_location} | Status: ${ride.status || 'pending'}`}
+                  secondary={`${ride.driver_name} |${ride.driver_vehicle} |${ride.pickup_location} → ${ride.dropoff_location} | Status: ${ride.status || 'pending'}`}
                 />
               </ListItem>
               <Divider component="li" />

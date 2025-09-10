@@ -1,7 +1,24 @@
 import React, { useState } from 'react';
-import { Box, Button, Container, TextField, Typography, Link, CircularProgress } from '@mui/material';
+import {
+  Box,
+  Button,
+  Container,
+  TextField,
+  Typography,
+  Link,
+  CircularProgress,
+  IconButton,
+  Drawer,
+  List,
+  ListItem,
+} from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
+import MenuIcon from '@mui/icons-material/Menu';
+import HomeIcon from '@mui/icons-material/Home';
+import LoginIcon from '@mui/icons-material/Login';
+import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import axios from 'axios';
 
 export default function SignIn() {
@@ -10,7 +27,13 @@ export default function SignIn() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const isMobile = useMediaQuery('(max-width:600px)');
+
+  // Drawer state
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const toggleDrawer = (open) => () => setDrawerOpen(open);
+
+  const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -26,44 +49,31 @@ export default function SignIn() {
       const user = response.data;
 
       // Save auth token
-      if (user.token) {
-        sessionStorage.setItem('authToken', user.token);
-      }
+      if (user.token) sessionStorage.setItem('authToken', user.token);
 
-      // Save email (supports both { email } and { user: { email } })
+      // Save email
       const savedEmail = user.email || user.user?.email;
-      if (savedEmail) {
-        sessionStorage.setItem('userEmail', savedEmail);
-      }
+      if (savedEmail) sessionStorage.setItem('userEmail', savedEmail);
 
-    const driverData = {
-  name: user.name || (user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : user.user?.name),
-  email: user.email || user.user?.email,
-  phone: user.phone || user.user?.phone,
-  vehicle: user.vehicle || user.user?.vehicle,
-};
-
-sessionStorage.setItem('driverInfo', JSON.stringify(driverData));
-
-
+      // Save driver info
+      const driverData = {
+        name: user.name || (user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : user.user?.name),
+        email: user.email || user.user?.email,
+        phone: user.phone || user.user?.phone,
+        vehicle: user.vehicle || user.user?.vehicle,
+      };
+      sessionStorage.setItem('driverInfo', JSON.stringify(driverData));
 
       // Redirect based on role
       const role = user.role || user.user?.role;
-      if (role === 'Passenger') {
-        navigate('/ride-booking');
-      } else if (role === 'Driver') {
-        navigate('/driver');
-      } else {
-        setError('Unknown user role');
-      }
+      if (role === 'Passenger') navigate('/ride-booking');
+      else if (role === 'Driver') navigate('/driver');
+      else setError('Unknown user role');
 
     } catch (err) {
       console.error(err);
-      if (err.response) {
-        setError(err.response.data.error || 'Login failed');
-      } else {
-        setError('Server error');
-      }
+      if (err.response) setError(err.response.data.error || 'Login failed');
+      else setError('Server error');
     } finally {
       setLoading(false);
     }
@@ -77,16 +87,15 @@ sessionStorage.setItem('driverInfo', JSON.stringify(driverData));
           bgcolor: '#82b1ff',
           color: 'white',
           p: 2,
-          textAlign: 'left',
           fontWeight: 'bold',
           fontSize: '1.5rem',
           pl: { xs: 2, sm: '50px' },
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          flexWrap: 'wrap',
         }}
       >
+        {/* Logo + Brand */}
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Box
             component="img"
@@ -99,36 +108,60 @@ sessionStorage.setItem('driverInfo', JSON.stringify(driverData));
           </Box>
         </Box>
 
-        <Box
-          sx={{
-            display: 'flex',
-            gap: 2,
-            flexDirection: { xs: 'column', sm: 'row' },
-            alignItems: 'center',
-            mr: { xs: 0, sm: 15 },
-            mt: { xs: 2, sm: 0 },
-          }}
-        >
-          <Button
-            variant="outlined"
-            onClick={() => navigate('/')}
-            sx={{
-              borderRadius: '15px',
-              borderColor: '#ffffff',
-              color: '#ffffff',
-              fontWeight: 'bold',
-              px: { xs: 2, sm: 3 },
-              py: { xs: 1, sm: 1.25 },
-              '&:hover': {
-                backgroundColor: 'rgba(255,255,255,0.15)',
+        {/* Desktop Buttons */}
+        {isDesktop && (
+          <Box sx={{ display: 'flex', gap: 2, mr: { sm: 15 } }}>
+            <Button
+              variant="outlined"
+              onClick={() => navigate('/')}
+              sx={{
+                borderRadius: '15px',
                 borderColor: '#ffffff',
-              },
-            }}
-          >
-            Home
-          </Button>
-        </Box>
+                color: '#ffffff',
+                fontWeight: 'bold',
+                px: { xs: 2, sm: 3 },
+                py: { xs: 1, sm: 1.25 },
+                '&:hover': {
+                  backgroundColor: 'rgba(255,255,255,0.15)',
+                  borderColor: '#ffffff',
+                },
+              }}
+            >
+              Home
+            </Button>
+          </Box>
+        )}
+
+        {/* Mobile Hamburger */}
+        {!isDesktop && (
+          <IconButton color="inherit" sx={{ ml: 'auto' }} onClick={toggleDrawer(true)}>
+            <MenuIcon />
+          </IconButton>
+        )}
       </Box>
+
+      {/* Mobile Drawer */}
+      <Drawer anchor="right" open={drawerOpen} onClose={toggleDrawer(false)}>
+        <Box sx={{ width: 250 }} role="presentation" onClick={toggleDrawer(false)}>
+          <List>
+            <ListItem disablePadding>
+              <Button fullWidth startIcon={<HomeIcon />} onClick={() => navigate('/')}>
+                Home
+              </Button>
+            </ListItem>
+            <ListItem disablePadding>
+              <Button fullWidth startIcon={<RocketLaunchIcon />} onClick={() => navigate('/getstarted')}>
+                Get Started
+              </Button>
+            </ListItem>
+            <ListItem disablePadding>
+              <Button fullWidth startIcon={<LoginIcon />} onClick={() => navigate('/signin')}>
+                Sign In
+              </Button>
+            </ListItem>
+          </List>
+        </Box>
+      </Drawer>
 
       {/* Sign In Form */}
       <Container maxWidth="xs" sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mt: 8 }}>
@@ -155,7 +188,6 @@ sessionStorage.setItem('driverInfo', JSON.stringify(driverData));
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-
           <TextField
             label="Password"
             type="password"
@@ -164,7 +196,6 @@ sessionStorage.setItem('driverInfo', JSON.stringify(driverData));
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-
           <Button
             type="submit"
             variant="contained"

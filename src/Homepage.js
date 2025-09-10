@@ -1,30 +1,45 @@
-import React from 'react';
-import { Container, Typography, Box, Button, List, ListItem, ListItemText } from '@mui/material';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Container,
+  Typography,
+  Box,
+  Button,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  IconButton,
+  Drawer,
+  useMediaQuery,
+  useTheme,
+} from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import CheckIcon from '@mui/icons-material/Check';
-import {  ListItemIcon } from '@mui/material'
 import PeopleIcon from '@mui/icons-material/People';
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
-import { useState, useEffect, useRef } from 'react';
-
-
+import MenuIcon from '@mui/icons-material/Menu';
+import HomeIcon from '@mui/icons-material/Home';
+import LoginIcon from '@mui/icons-material/Login';
+import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
 
-const handleStartRiding = () => {
-  navigate('/getstarted', { state: { defaultUserType: 'Passenger' } });
-};
-
-const handleStartDriving = () => {
-  navigate('/getstarted', { state: { defaultUserType: 'Driver' } });
-};
-
-
-
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [visible, setVisible] = useState(false);
   const ref = useRef(null);
 
+  const handleStartRiding = () => {
+    navigate('/getstarted', { state: { defaultUserType: 'Passenger' } });
+  };
+
+  const handleStartDriving = () => {
+    navigate('/getstarted', { state: { defaultUserType: 'Driver' } });
+  };
+
+  // Intersection observer animation
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -33,7 +48,7 @@ const handleStartDriving = () => {
           observer.unobserve(entry.target);
         }
       },
-      { threshold: 0.1 } // trigger a little earlier
+      { threshold: 0.1 }
     );
 
     if (ref.current) observer.observe(ref.current);
@@ -41,105 +56,136 @@ const handleStartDriving = () => {
     return () => observer.disconnect();
   }, []);
 
+  const toggleDrawer = (open) => () => setDrawerOpen(open);
+
   return (
-
     <>
-{/* Full width header outside Container */}
-<Box
-  sx={{
-    bgcolor: '#82b1ff',
-    color: 'white',
-    p: 2,
-    textAlign: 'left',
-    fontWeight: 'bold',
-    fontSize: '1.5rem',
-    pl: { xs: 2, sm: '50px' },
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap', // allow wrapping on small screens
-  }}
->
-  {/* Logo + Brand */}
-  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-    <Box
-      component="img"
-      src="/taxifav.png"
-      alt="Taxi Icon"
-      sx={{
-        width: 35,
-        height: 35,
-        mt: -1.25,
-        ml: { xs: 1, sm: 15 },
-      }}
-    />
-    <Box
-      component="span"
-      sx={{
-        fontWeight: 'bold',
-        fontSize: { xs: '1.25rem', sm: '1.75rem' },
-        ml: '10px',
-      }}
-    >
-      SWYFT
-    </Box>
-  </Box>
+      {/* Header */}
+      <Box
+        sx={{
+          bgcolor: '#82b1ff',
+          color: 'white',
+          p: 2,
+          fontWeight: 'bold',
+          fontSize: '1.5rem',
+          pl: { xs: 2, sm: '50px' },
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        {/* Logo + Brand */}
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Box
+            component="img"
+            src="/taxifav.png"
+            alt="Taxi Icon"
+            sx={{ width: 35, height: 35, mt: -1.25, ml: { xs: 1, sm: 15 } }}
+          />
+          <Box
+            component="span"
+            sx={{
+              fontWeight: 'bold',
+              fontSize: { xs: '1.25rem', sm: '1.75rem' },
+              ml: '10px',
+            }}
+          >
+            SWYFT
+          </Box>
+        </Box>
 
-  {/* Action Buttons */}
-  <Box
-    sx={{
-      display: 'flex',
-      gap: 2,
-      flexDirection: { xs: 'column', sm: 'row' }, // stack on mobile
-      alignItems: 'center',
-      mr: { xs: 0, sm: 15 },
-      mt: { xs: 2, sm: 0 },
-    }}
-  >
-    <Button
-      variant="contained"
-      onClick={() => navigate('/getstarted')}
-      sx={{
-        borderRadius: '15px',
-        backgroundColor: '#ffffff',
-        fontWeight: 'bold',
-        px: { xs: 2, sm: 3 },
-        py: { xs: 1, sm: 1.25 },
-        color: '#000000',
-        '&:hover': {
-          backgroundColor: '#f0f0f0',
-        },
-      }}
-    >
-      Get Started
-    </Button>
+        {/* Desktop Buttons */}
+        {isDesktop && (
+          <Box
+            sx={{
+              display: 'flex',
+              gap: 2,
+              mr: { sm: 15 },
+              alignItems: 'center',
+            }}
+          >
+            <Button
+              variant="contained"
+              onClick={() => navigate('/getstarted')}
+              sx={{
+                borderRadius: '15px',
+                backgroundColor: '#ffffff',
+                fontWeight: 'bold',
+                px: { xs: 2, sm: 3 },
+                py: { xs: 1, sm: 1.25 },
+                color: '#000000',
+                '&:hover': { backgroundColor: '#f0f0f0' },
+              }}
+            >
+              Get Started
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={() => navigate('/signin')}
+              sx={{
+                borderRadius: '15px',
+                borderColor: '#ffffff',
+                color: '#ffffff',
+                fontWeight: 'bold',
+                px: { xs: 2, sm: 3 },
+                py: { xs: 1, sm: 1.25 },
+                '&:hover': {
+                  backgroundColor: 'rgba(255,255,255,0.15)',
+                  borderColor: '#ffffff',
+                },
+              }}
+            >
+              Sign In
+            </Button>
+          </Box>
+        )}
 
-    <Button
-      variant="outlined"
-      onClick={() => navigate('/signin')}
-      sx={{
-        borderRadius: '15px',
-        borderColor: '#ffffff',
-        color: '#ffffff',
-        fontWeight: 'bold',
-        px: { xs: 2, sm: 3 },
-        py: { xs: 1, sm: 1.25 },
-        '&:hover': {
-          backgroundColor: 'rgba(255,255,255,0.15)',
-          borderColor: '#ffffff',
-        },
-      }}
-    >
-      Sign In
-    </Button>
-  </Box>
-</Box>
+        {/* Mobile Hamburger */}
+        {!isDesktop && (
+          <IconButton color="inherit" sx={{ ml: 'auto' }} onClick={toggleDrawer(true)}>
+            <MenuIcon />
+          </IconButton>
+        )}
+      </Box>
 
+      {/* Mobile Drawer */}
+      <Drawer anchor="right" open={drawerOpen} onClose={toggleDrawer(false)}>
+        <Box sx={{ width: 250 }} role="presentation" onClick={toggleDrawer(false)}>
+          <List>
+            <ListItem disablePadding>
+              <Button
+                fullWidth
+                startIcon={<HomeIcon />}
+                onClick={() => navigate('/')}
+              >
+                Home
+              </Button>
+            </ListItem>
+            <ListItem disablePadding>
+              <Button
+                fullWidth
+                startIcon={<RocketLaunchIcon />}
+                onClick={() => navigate('/getstarted')}
+              >
+                Get Started
+              </Button>
+            </ListItem>
+            <ListItem disablePadding>
+              <Button
+                fullWidth
+                startIcon={<LoginIcon />}
+                onClick={() => navigate('/signin')}
+              >
+                Sign In
+              </Button>
+            </ListItem>
+          </List>
+        </Box>
+      </Drawer>
 
-
-      {/* Main header */}
+      {/* === Rest of your homepage content === */}
       <Container maxWidth="md" sx={{ mt: 6, mb: 4, textAlign: 'center' }}>
-        <Typography variant="h3" fontWeight="bold" gutterBottom  sx={{ color: '#4e4e4eff'  }}>
+        <Typography variant="h3" fontWeight="bold" gutterBottom sx={{ color: '#4e4e4eff' }}>
           Your Ride, Your Way
         </Typography>
         <Typography variant="h6" color="text.secondary">

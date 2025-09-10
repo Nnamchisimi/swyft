@@ -65,6 +65,35 @@ export default function DriverMap({ ride }) {
     return () => navigator.geolocation.clearWatch(watchId);
   }, [ride]);
 
+  useEffect(() => {
+  if (!ride) {
+    // Reset map state to default
+    setPickup(null);
+    setDropoff(null);
+    setDirections(null);
+    setHasPickedUp(false);
+    setDistance(null);
+    setDuration(null);
+    return;
+  }
+
+  if (!isLoaded || !window.google?.maps?.Geocoder) return;
+
+  const geocoder = new window.google.maps.Geocoder();
+
+  const geocodeAddress = (address, setLocation) => {
+    if (!address) return setLocation(null);
+    geocoder.geocode({ address }, (results, status) => {
+      if (status === "OK" && results[0]) {
+        setLocation({ lat: results[0].geometry.location.lat(), lng: results[0].geometry.location.lng() });
+      } else setLocation(null);
+    });
+  };
+
+  geocodeAddress(ride.pickup_location, setPickup);
+  geocodeAddress(ride.dropoff_location, setDropoff);
+}, [ride, isLoaded]);
+
   // Directions
   useEffect(() => {
     if (!pickup || !dropoff || !driverLocation) return;
