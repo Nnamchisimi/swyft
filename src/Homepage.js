@@ -158,7 +158,7 @@ export default function HomePage() {
                 startIcon={<HomeIcon />}
                 onClick={() => navigate('/')}
               >
-                Home
+                Hom
               </Button>
             </ListItem>
             <ListItem disablePadding>
