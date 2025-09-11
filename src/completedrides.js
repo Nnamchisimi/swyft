@@ -8,13 +8,16 @@ export default function CompletedRides({ rides }) {
   return (
     <Box sx={{
          width: isDesktop ? "70%" : "100%",   // take 70% of screen width on desktop
-    maxWidth: isDesktop ? "1000px" : "500px", // cap it at 1000px on desktop, 500px on mobile
+     maxWidth: isDesktop ? "600px" : "450px", // cap it at 1000px on desktop, 500px on mobile
+    minWidth: isDesktop ? "600px" : "450px", // cap it at 1000px on desktop, 500px on mobile
+     maxHeight: 500,
+      minHeight: 400,    // ✅ Always at least 400px tall
       border: "1px solid #ccc",
       borderRadius: 3,
       p: 0,
       mt: 2,
       ml: isDesktop ? 4 : 0,
-      maxHeight: 500,
+  
       overflowY: "auto",
       bgcolor: "#f5f5f5",
     }}>
