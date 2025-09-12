@@ -15,7 +15,7 @@ const { Server } = require("socket.io");
 const server = http.createServer(app);
 
 const io = new Server(server, {
-  cors: { origin: "https://swyft-5.onrender.com", methods: ["GET","POST"] },
+  cors: { origin: "http://localhost:3003", methods: ["GET","POST"] },
 });
 
 io.on("connection", (socket) => {
@@ -85,9 +85,7 @@ app.post('/api/users', async (req, res) => {
         (err3) => {
           if (err3) return res.status(500).json({ error: 'Failed to save token' });
 
-const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:3001";
-const verifyUrl = `${BACKEND_URL}/api/users/verify?token=${token}`;
-
+          const verifyUrl = `http://localhost:3001/api/users/verify?token=${token}`;
           transporter.sendMail({
             from: process.env.EMAIL_USER,
             to: email,
