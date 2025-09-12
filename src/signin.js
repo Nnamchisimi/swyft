@@ -40,13 +40,11 @@ export default function SignIn() {
     setError('');
     setLoading(true);
 
-   const API_URL = process.env.REACT_APP_API_URL;
-
-try {
-  const response = await axios.post(`${API_URL}/users/login`, {
-    email,
-    password,
-  });
+    try {
+      const response = await axios.post(`${process.env.REACT_APP_API_URL}/users/login`, {
+        email,
+        password,
+      });
 
 
       const user = response.data;
