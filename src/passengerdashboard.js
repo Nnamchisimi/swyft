@@ -109,10 +109,9 @@ export default function PassengerDashboard() {
       async function fetchUserEmail() {
         try {
           const token = sessionStorage.getItem('authToken');
-       const res = await fetch(`${process.env.REACT_APP_API_URL}/user/profile`, {
-  headers: { Authorization: `Bearer ${token}` },
-});
-
+          const res = await fetch('http://localhost:3001/api/user/profile', {
+            headers: { Authorization: `Bearer ${token}` },
+          });
           const data = await res.json();
           if (res.ok && data.email) {
             setPassengerEmail(data.email);
@@ -195,7 +194,7 @@ export default function PassengerDashboard() {
     }
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/rides`, {
+      const response = await fetch('http://localhost:3001/api/rides', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ passengerName, passengerEmail, passengerPhone, pickup, dropoff, rideType, ridePrice }),
@@ -234,10 +233,7 @@ export default function PassengerDashboard() {
 
   const handleCancelRide = async () => {
     try {
-    await fetch(`${process.env.REACT_APP_API_URL}/rides/${rideToConfirm.id}/cancel`, {
-  method: 'POST',
-});
-
+      await fetch(`http://localhost:3001/api/rides/${rideToConfirm.id}/cancel`, { method: 'POST' });
       setOpenConfirmDialog(false);
       setSnackbar({ open: true, message: `Ride #${rideToConfirm.id} cancelled`, severity: 'error' });
       setSelectedRide(null);
