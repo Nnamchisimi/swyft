@@ -17,8 +17,8 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: { 
     origin: [
-      'https://swyftlatest-bz31dzrl2-kombosawb-8960s-projects.vercel.app',
-      'http://localhost:3000'
+      'https://swyftlatest.vercel.app', // production frontend
+      'http://localhost:3000'            // local frontend dev
     ],
     methods: ["GET","POST"]
   },
