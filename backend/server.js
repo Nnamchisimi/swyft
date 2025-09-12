@@ -15,8 +15,15 @@ const { Server } = require("socket.io");
 const server = http.createServer(app);
 
 const io = new Server(server, {
-  cors: { origin: "http://localhost:3003", methods: ["GET","POST"] },
+  cors: { 
+    origin: [
+      'https://swyftlatest-bz31dzrl2-kombosawb-8960s-projects.vercel.app',
+      'http://localhost:3000'
+    ],
+    methods: ["GET","POST"]
+  },
 });
+
 
 io.on("connection", (socket) => {
   console.log("Client connected");
