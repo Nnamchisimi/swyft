@@ -60,10 +60,17 @@ const transporter = nodemailer.createTransport({
 });
 
 // ===== Serve React frontend =====
-app.use(express.static(path.join(__dirname, '../build')));
+const path = require('path');
+
+// Serve React frontend
+const FRONTEND_BUILD_PATH = path.join(__dirname, '../src/build');
+
+app.use(express.static(FRONTEND_BUILD_PATH));
+
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../build', 'index.html'));
+  res.sendFile(path.join(FRONTEND_BUILD_PATH, 'index.html'));
 });
+
 
 // ====== USER SIGNUP ======
 app.post('/api/users', async (req, res) => {
