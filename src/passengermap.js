@@ -38,7 +38,10 @@ export default function PassengerMap({ passengerEmail, pickupLocation, dropoffLo
   useEffect(() => {
     if (!rideId || !passengerEmail) return;
 
-    const socket = io("http://localhost:3001");
+// Connect to socket server, fallback to localhost for local dev
+const socket = io(process.env.REACT_APP_SOCKET_URL || "http://localhost:3001", {
+  transports: ["websocket"], // ensures real-time without fallbacks
+});
     socket.emit("joinRideRoom", rideId);
 
     socket.on("connect", () => console.log("Connected to socket server"));
