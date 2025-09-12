@@ -1,17 +1,20 @@
-// db.js
-import mongoose from "mongoose";
-import dotenv from "dotenv";
+const mysql = require('mysql');
+require('dotenv').config();  // load .env
 
-dotenv.config(); // Load .env
+const connection = mysql.createConnection({
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASS,
+  database: process.env.DB_NAME,
+  port: process.env.DB_PORT,
+});
 
-async function connectDB() {
-  try {
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log("✅ Connected to MongoDB Atlas");
-  } catch (err) {
-    console.error("❌ Database connection failed:", err);
-    process.exit(1); // Stop server if DB connection fails
+connection.connect((err) => {
+  if (err) {
+    console.error('Database connection failed:', err);
+    return;
   }
-}
+  console.log(`Connected to MySQL database ${process.env.DB_NAME}!`);
+});
 
-export default connectDB;
+module.exports = connection;
