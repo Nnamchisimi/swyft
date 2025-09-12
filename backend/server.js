@@ -63,7 +63,7 @@ const transporter = nodemailer.createTransport({
 const path = require('path');
 
 // Serve React frontend
-const FRONTEND_BUILD_PATH = path.join(__dirname, '../src/build');
+const FRONTEND_BUILD_PATH = path.join(__dirname, '../build');
 
 app.use(express.static(FRONTEND_BUILD_PATH));
 
