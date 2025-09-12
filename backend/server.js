@@ -1,3 +1,4 @@
+// backend/server.js
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
@@ -5,27 +6,32 @@ const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 require('dotenv').config();
+const path = require('path');
+const http = require('http');
+const { Server } = require('socket.io');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const http = require("http");
-const { Server } = require("socket.io");
 const server = http.createServer(app);
 
+// Frontend URL for CORS
+const FRONTEND_URL = process.env.FRONTEND_URL || '*';
+
+// Socket.IO setup
 const io = new Server(server, {
-  cors: { origin: "http://localhost:3003", methods: ["GET","POST"] },
+  cors: { origin: FRONTEND_URL, methods: ["GET","POST"] },
 });
 
-io.on("connection", (socket) => {
+io.on("connection", socket => {
   console.log("Client connected");
 
-  socket.on("joinRoom", (email) => socket.join(email));
-  socket.on("leaveRoom", (email) => socket.leave(email));
+  socket.on("joinRoom", email => socket.join(email));
+  socket.on("leaveRoom", email => socket.leave(email));
 
-  socket.on("newRide", (ride) => io.emit("newRide", ride));
-  socket.on("rideUpdated", (ride) => {
+  socket.on("newRide", ride => io.emit("newRide", ride));
+  socket.on("rideUpdated", ride => {
     io.emit("rideUpdated", ride);
     if (ride.passenger_email) io.to(ride.passenger_email).emit("rideUpdated", ride);
   });
@@ -33,11 +39,12 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => console.log("Client disconnected"));
 });
 
+// MySQL connection
 const db = mysql.createConnection({
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASS || '123456789',
-  database: process.env.DB_NAME || 'swyft',
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASS,
+  database: process.env.DB_NAME,
   port: process.env.DB_PORT || 3306,
 });
 
@@ -46,9 +53,16 @@ db.connect(err => {
   console.log('Connected to MySQL database.');
 });
 
+// Nodemailer transporter
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+});
+
+// ===== Serve React frontend =====
+app.use(express.static(path.join(__dirname, '../build')));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../build', 'index.html'));
 });
 
 // ====== USER SIGNUP ======
@@ -85,7 +99,7 @@ app.post('/api/users', async (req, res) => {
         (err3) => {
           if (err3) return res.status(500).json({ error: 'Failed to save token' });
 
-          const verifyUrl = `http://localhost:3001/api/users/verify?token=${token}`;
+          const verifyUrl = `${FRONTEND_URL}/api/users/verify?token=${token}`;
           transporter.sendMail({
             from: process.env.EMAIL_USER,
             to: email,
@@ -116,7 +130,7 @@ app.get('/api/users/verify', (req, res) => {
       db.query('UPDATE users SET is_verified = 1 WHERE id = ?', [userId], (err2) => {
         if (err2) return res.send('<h3>Failed to verify email</h3>');
         db.query('DELETE FROM email_verification_tokens WHERE token = ?', [token]);
-        res.redirect('http://localhost:3003/signin');
+        res.redirect(`${FRONTEND_URL}/signin`);
       });
     });
   } catch {
@@ -150,6 +164,7 @@ app.get('/api/drivers', (req, res) => {
     res.json(results);
   });
 });
+
 
 // ====== RIDES ======
 // Get rides
