@@ -1,3 +1,3 @@
-app.get('/test', (req, res) => {
-  res.send('Server is running!');
+app.get('/', (req, res) => {
+  res.send('Backend is running!');
 });
