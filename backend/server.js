@@ -293,6 +293,8 @@ app.post("/api/rides/:id/driver-location", (req, res) => {
   });
 });
 
+
+
 // Active rides
 app.get('/api/active-rides', (req, res) => {
   const { driver_email } = req.query;
@@ -305,6 +307,12 @@ app.get('/api/active-rides', (req, res) => {
   });
 });
 
+
+
+
 // Start server
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
+});
