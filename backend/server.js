@@ -42,13 +42,13 @@ mongoose.connect(process.env.MONGO_URI, { dbName: process.env.DB_NAME })
 
 // ====== Schemas ======
 const userSchema = new mongoose.Schema({
-  firstName: String,
-  lastName: String,
+  first_name: String,
+  last_name: String,
   email: { type: String, unique: true },
   password: String,
   role: String,
   phone: String,
-  vehicle: String,
+  vehicle_plate: String,
   is_verified: { type: Boolean, default: false }
 });
 
