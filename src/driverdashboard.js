@@ -57,20 +57,21 @@ export default function DriverDashboard() {
   };
   const toggleDrawer = (open) => () => setDrawerOpen(open);
 
-useEffect(() => {
-  const savedDriver = sessionStorage.getItem("driverInfo");
-  if (savedDriver) {
-    const driver = JSON.parse(savedDriver);
+  // Load driver info from sessionStorage and map DB fields
+  useEffect(() => {
+    const savedDriver = sessionStorage.getItem("driverInfo");
+    if (savedDriver) {
+      const driver = JSON.parse(savedDriver);
+      setDriverInfo({
+        email: driver.email,
+        phone: driver.phone,
+        name: `${driver.first_name || ""} ${driver.last_name || ""}`.trim(),
+        vehicle: driver.vehicle_plate || "",
+      });
+    }
+  }, []);
 
-    // Use consistent field names from backend
-    driver.name = `${driver.firstName || ""} ${driver.lastName || ""}`.trim();
-
-    setDriverInfo(driver);
-  }
-}, []);
-
-
-
+  // Fetch rides periodically
   useEffect(() => {
     if (!driverInfo.email) return;
 
@@ -97,15 +98,13 @@ useEffect(() => {
           `${baseUrl}/api/rides?driver_email=${driverInfo.email}&status=completed`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        const completedData = await completedRes.json();
-        setCompletedRides(completedData);
+        setCompletedRides(await completedRes.json());
 
         const canceledRes = await fetch(
           `${baseUrl}/api/rides?driver_email=${driverInfo.email}&status=cancelled`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        const canceledData = await canceledRes.json();
-        setCanceledRides(canceledData);
+        setCanceledRides(await canceledRes.json());
       } catch (err) {
         console.error(err);
       }
@@ -116,6 +115,7 @@ useEffect(() => {
     return () => clearInterval(interval);
   }, [driverInfo.email]);
 
+  // Listen for new rides
   useEffect(() => {
     socket.on("newRide", (ride) => {
       if (!ride.driver_assigned) setPendingRides((prev) => [ride, ...prev]);
@@ -123,6 +123,7 @@ useEffect(() => {
     return () => socket.off("newRide");
   }, []);
 
+  // Listen for ride updates
   useEffect(() => {
     if (!driverInfo.email) return;
     socket.emit("joinRoom", driverInfo.email);
@@ -164,6 +165,7 @@ useEffect(() => {
     };
   }, [driverInfo.email]);
 
+  // Accept a ride
   const handleConfirmAccept = async () => {
     if (!selectedRide) return;
     if (activeRides.length > 0) {
@@ -184,7 +186,10 @@ useEffect(() => {
             "Content-Type": "application/json", 
             Authorization: `Bearer ${token}` 
           },
-          body: JSON.stringify(driverInfo),
+          body: JSON.stringify({
+            email: driverInfo.email,
+            phone: driverInfo.phone,
+          }),
         }
       );
 
@@ -202,6 +207,7 @@ useEffect(() => {
     }
   };
 
+  // Start, complete, cancel ride
   const handleRideAction = async (ride, action) => {
     try {
       const token = sessionStorage.getItem("authToken");
@@ -229,6 +235,7 @@ useEffect(() => {
       alert(err.message);
     }
   };
+
   return (
     <Box sx={{ p: 0, bgcolor: "#f0f2f5", minHeight: "100vh" }}>
       {/* Header */}
@@ -256,7 +263,6 @@ useEffect(() => {
           </span>
         </Box>
 
-        {/* Desktop Buttons */}
         {isDesktop && (
           <Box sx={{ display: "flex", gap: 2, mr: 10 }}>
             <Button
@@ -289,7 +295,6 @@ useEffect(() => {
           </Box>
         )}
 
-        {/* Mobile Hamburger */}
         {!isDesktop && (
           <IconButton color="inherit" sx={{ ml: "auto" }} onClick={toggleDrawer(true)}>
             <MenuIcon />
@@ -361,11 +366,11 @@ useEffect(() => {
               <Typography>No pending rides</Typography>
             ) : (
               pendingRides.map((ride) => (
-                <Box key={ride.id} sx={{ border: "1px solid #ccc", borderRadius: 2, p: 2, mb: 2 }}>
-                  <Typography>#{ride.id} - {ride.passenger_name} ({ride.ride_type})</Typography>
+                <Box key={ride.id || ride._id} sx={{ border: "1px solid #ccc", borderRadius: 2, p: 2, mb: 2 }}>
+                  <Typography>#{ride.id || ride._id} - {ride.passenger_name} ({ride.ride_type})</Typography>
                   <Typography>Pickup: {ride.pickup_location}</Typography>
                   <Typography>Dropoff: {ride.dropoff_location}</Typography>
-                 <Typography>Fare:  ₺{ride.ride_price?.toFixed(2) || "0.00"}</Typography>
+                  <Typography>Fare: ₺{ride.ride_price?.toFixed(2) || "0.00"}</Typography>
                   <Button variant="contained" sx={{ mt: 1 }} onClick={() => handleOpenDialog(ride)}>Accept Ride</Button>
                 </Box>
               ))
@@ -392,7 +397,7 @@ useEffect(() => {
       {/* Accept Ride Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog}>
         <DialogTitle>Accept Ride</DialogTitle>
-        <DialogContent>Are you sure you want to accept ride #{selectedRide?.id}?</DialogContent>
+        <DialogContent>Are you sure you want to accept ride #{selectedRide?.id || selectedRide?._id}?</DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Cancel</Button>
           <Button variant="contained" onClick={handleConfirmAccept}>Confirm</Button>
