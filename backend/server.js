@@ -229,26 +229,36 @@ app.post('/api/rides/:rideId/accept', async (req, res) => {
   const { email, phone } = req.body;
 
   try {
+    // Get the driver from the DB
     const driver = await User.findOne({ email, role: 'Driver' });
     if (!driver) return res.status(404).json({ error: 'Driver not found' });
 
-    const ride = await Ride.findByIdAndUpdate(rideId, {
-      driver_name: `${driver.firstName} ${driver.lastName}`,
-      driver_email: driver.email,
-      driver_phone: phone,
-      driver_vehicle: driver.vehicle,
-      driver_assigned: true,
-      status: 'accepted'
-    }, { new: true });
+    // Strictly use snake_case fields
+    const driverName = `${driver.first_name} ${driver.last_name}`.trim();
+
+    const ride = await Ride.findByIdAndUpdate(
+      rideId,
+      {
+        driver_name: driverName,
+        driver_email: driver.email,
+        driver_phone: phone,
+        driver_vehicle: driver.vehicle_plate,
+        driver_assigned: true,
+        status: 'accepted'
+      },
+      { new: true }
+    );
 
     io.emit('rideUpdated', ride);
     if (ride.passenger_email) io.to(ride.passenger_email).emit('rideUpdated', ride);
 
-    res.json({ message: 'Ride accepted successfully', rideId, driver_name: ride.driver_name, vehicle: ride.driver_vehicle });
+    res.json({ message: 'Ride accepted successfully', ride });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Failed to accept ride' });
   }
 });
+
 
 // Start, complete, cancel rides and driver location updates
 app.post('/api/rides/:id/start', async (req, res) => {
