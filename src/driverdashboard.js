@@ -55,7 +55,6 @@ export default function DriverDashboard() {
     setOpenDialog(false);
     setSelectedRide(null);
   };
-
   const toggleDrawer = (open) => () => setDrawerOpen(open);
 
   useEffect(() => {
@@ -73,15 +72,16 @@ export default function DriverDashboard() {
     const fetchRides = async () => {
       try {
         const token = sessionStorage.getItem("authToken");
+        const baseUrl = process.env.REACT_APP_BACKEND_URL;
 
-        const pendingRes = await fetch("http://localhost:3001/api/rides", {
+        const pendingRes = await fetch(`${baseUrl}/api/rides`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const pendingData = await pendingRes.json();
         setPendingRides(pendingData.filter((r) => !r.driver_assigned));
 
         const activeRes = await fetch(
-          `http://localhost:3001/api/active-rides?driver_email=${driverInfo.email}`,
+          `${baseUrl}/api/active-rides?driver_email=${driverInfo.email}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         const activeData = (await activeRes.json()).filter((r) => r.status !== "completed");
@@ -89,14 +89,14 @@ export default function DriverDashboard() {
         setCurrentRide(activeData[0] || null);
 
         const completedRes = await fetch(
-          `http://localhost:3001/api/rides?driver_email=${driverInfo.email}&status=completed`,
+          `${baseUrl}/api/rides?driver_email=${driverInfo.email}&status=completed`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         const completedData = await completedRes.json();
         setCompletedRides(completedData);
 
         const canceledRes = await fetch(
-          `http://localhost:3001/api/rides?driver_email=${driverInfo.email}&status=canceled`,
+          `${baseUrl}/api/rides?driver_email=${driverInfo.email}&status=canceled`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         const canceledData = await canceledRes.json();
@@ -169,14 +169,20 @@ export default function DriverDashboard() {
 
     try {
       const token = sessionStorage.getItem("authToken");
+      const baseUrl = process.env.REACT_APP_BACKEND_URL;
+
       const res = await fetch(
-        `http://localhost:3001/api/rides/${selectedRide.id || selectedRide._id}/accept`,
+        `${baseUrl}/api/rides/${selectedRide.id || selectedRide._id}/accept`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          headers: { 
+            "Content-Type": "application/json", 
+            Authorization: `Bearer ${token}` 
+          },
           body: JSON.stringify(driverInfo),
         }
       );
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Accept failed");
 
@@ -195,15 +201,16 @@ export default function DriverDashboard() {
     try {
       const token = sessionStorage.getItem("authToken");
       const rideId = ride.id || ride._id;
+      const baseUrl = process.env.REACT_APP_BACKEND_URL;
       let url;
 
-      if (action === "start") url = `http://localhost:3001/api/rides/${rideId}/start`;
+      if (action === "start") url = `${baseUrl}/api/rides/${rideId}/start`;
       else if (action === "complete") {
         if (!window.confirm(`Complete ride #${rideId}?`)) return;
-        url = `http://localhost:3001/api/rides/${rideId}/complete`;
+        url = `${baseUrl}/api/rides/${rideId}/complete`;
       } else if (action === "cancel") {
         if (!window.confirm(`Cancel ride #${rideId}?`)) return;
-        url = `http://localhost:3001/api/rides/${rideId}/cancel`;
+        url = `${baseUrl}/api/rides/${rideId}/cancel`;
       } else throw new Error("Invalid action");
 
       const res = await fetch(url, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
@@ -217,7 +224,6 @@ export default function DriverDashboard() {
       alert(err.message);
     }
   };
-
   return (
     <Box sx={{ p: 0, bgcolor: "#f0f2f5", minHeight: "100vh" }}>
       {/* Header */}

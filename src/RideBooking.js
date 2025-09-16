@@ -24,7 +24,7 @@ export default function RideBooking() {
     const rideData = { passengerName, passengerEmail, passengerPhone, pickup, dropoff, rideType };
 
     // Send POST request to backend API
-    fetch('http://localhost:3001/api/rides', {
+    fetch(`${process.env.REACT_APP_BACKEND_URL}/api/rides`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(rideData),
