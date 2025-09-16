@@ -82,7 +82,8 @@ export default function CompletedRides({ rides }) {
                           {new Date(ride.completed_at).toLocaleString()}
                         </Typography>
                         <Typography variant="body2" color="textSecondary">
-                          Fare: ₺{ride.price?.toFixed(2) || "0.00"}
+                          Fare: ₺{ride.ride_price?.toFixed(2) || "0.00"}
+                                           
                         </Typography>
                       </>
                     }
