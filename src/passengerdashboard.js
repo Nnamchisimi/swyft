@@ -194,7 +194,7 @@ export default function PassengerDashboard() {
     }
 
     try {
-      const response = await fetch('http://localhost:3001/api/rides', {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/rides`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ passengerName, passengerEmail, passengerPhone, pickup, dropoff, rideType, ridePrice }),
