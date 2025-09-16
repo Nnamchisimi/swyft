@@ -3,10 +3,12 @@ import { GoogleMap, Marker, DirectionsRenderer, useJsApiLoader } from "@react-go
 import { Box, Paper, Typography } from "@mui/material";
 import { io } from "socket.io-client";
 
-const containerStyle = { width: "100%", height: 400 };
+const containerStyle = { width: "100%", height: "100%" };
+const SOCKET_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:3001";
+const socket = io(SOCKET_URL);
 
 export default function PassengerMap({ passengerEmail, pickupLocation, dropoffLocation, rideBooked, rideId }) {
-  const [passengerLocation, setPassengerLocation] = useState(null); // will get from system
+  const [passengerLocation, setPassengerLocation] = useState(null);
   const [pickup, setPickup] = useState(pickupLocation || null);
   const [dropoff, setDropoff] = useState(dropoffLocation || null);
   const [driverLocation, setDriverLocation] = useState(null);
@@ -16,16 +18,13 @@ export default function PassengerMap({ passengerEmail, pickupLocation, dropoffLo
   const mapRef = useRef(null);
 
   const { isLoaded } = useJsApiLoader({
-    googleMapsApiKey: "AIzaSyAcngMU7US6QjMQ5R9DRLhDhvCEqwCxsWo",
+    googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_KEY || "YOUR_GOOGLE_MAPS_API_KEY",
     libraries: ["places"],
   });
 
-  // ✅ Get system location on load
+  // Get passenger's current location
   useEffect(() => {
-    if (!navigator.geolocation) {
-      console.error("Geolocation not supported.");
-      return;
-    }
+    if (!navigator.geolocation) return console.error("Geolocation not supported");
 
     navigator.geolocation.getCurrentPosition(
       (pos) => setPassengerLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
@@ -34,41 +33,38 @@ export default function PassengerMap({ passengerEmail, pickupLocation, dropoffLo
     );
   }, []);
 
-  // ✅ Connect passenger to socket room & listen for driver updates
+  // Listen for driver location updates
   useEffect(() => {
-    if (!rideId || !passengerEmail) return;
+    if (!rideId) return;
 
-    const socket = io("http://localhost:3001");
     socket.emit("joinRideRoom", rideId);
 
-    socket.on("connect", () => console.log("Connected to socket server"));
-    socket.on("driverLocationUpdated", (data) => {
-      if (data.rideId === rideId) setDriverLocation({ lat: data.lat, lng: data.lng });
-    });
+    const handleDriverLocation = ({ rideId: updatedRideId, lat, lng }) => {
+      if (updatedRideId === rideId) setDriverLocation({ lat, lng });
+    };
+
+    socket.on("driverLocationUpdated", handleDriverLocation);
 
     return () => {
       socket.emit("leaveRideRoom", rideId);
-      socket.disconnect();
+      socket.off("driverLocationUpdated", handleDriverLocation);
     };
-  }, [rideId, passengerEmail]);
+  }, [rideId]);
 
-  // ✅ Geocode pickup & dropoff
+  // Geocode pickup & dropoff addresses
   useEffect(() => {
     if (!isLoaded || !window.google?.maps?.Geocoder) return;
-
     const geocoder = new window.google.maps.Geocoder();
 
-    const geocodeAddress = (address, setLocation) => {
+    const geocodeAddress = (address, setter) => {
       if (!address) return;
       geocoder.geocode({ address }, (results, status) => {
         if (status === "OK" && results[0]) {
-          setLocation({
+          setter({
             lat: results[0].geometry.location.lat(),
             lng: results[0].geometry.location.lng(),
           });
-        } else {
-          console.error("Geocode failed:", status);
-        }
+        } else console.error("Geocode failed:", status);
       });
     };
 
@@ -76,10 +72,9 @@ export default function PassengerMap({ passengerEmail, pickupLocation, dropoffLo
     geocodeAddress(dropoffLocation?.address, setDropoff);
   }, [pickupLocation?.address, dropoffLocation?.address, isLoaded]);
 
-  // ✅ Fetch directions
+  // Fetch directions
   useEffect(() => {
     if (!isLoaded || !pickup || !dropoff || !passengerLocation) return;
-
     const directionsService = new window.google.maps.DirectionsService();
 
     directionsService.route(
@@ -104,20 +99,19 @@ export default function PassengerMap({ passengerEmail, pickupLocation, dropoffLo
     );
   }, [pickup, dropoff, isLoaded, passengerLocation]);
 
-  // ✅ Reset map on rideBooked
+  // Reset map when ride is booked
   useEffect(() => {
-    if (rideBooked) {
-      setPickup(null);
-      setDropoff(null);
-      setDriverLocation(null);
-      setDirections(null);
-      setDistance(null);
-      setDuration(null);
-      setPassengerLocation(null);
-    }
+    if (!rideBooked) return;
+
+    setPickup(null);
+    setDropoff(null);
+    setDriverLocation(null);
+    setDirections(null);
+    setDistance(null);
+    setDuration(null);
+    setPassengerLocation(null);
   }, [rideBooked]);
 
-  // Only render map when API loaded & location available
   if (!isLoaded || !passengerLocation) {
     return <Typography>Loading map and fetching your location…</Typography>;
   }

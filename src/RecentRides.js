@@ -2,24 +2,28 @@ import React, { useEffect, useState } from 'react';
 import { Box, Typography, List, ListItem, ListItemText, Divider, useTheme, useMediaQuery } from '@mui/material';
 import { io } from 'socket.io-client';
 
-// Same socket instance
-const socket = io("http://localhost:3001");
+// Use environment variable for backend URL
+const SOCKET_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:3001";
+const socket = io(SOCKET_URL);
 
 export default function RecentRides({ userEmail }) {
   const [rides, setRides] = useState([]);
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
 
-  // Fetch initial rides
+  // Fetch initial rides from backend
   useEffect(() => {
     if (!userEmail) return;
 
     async function fetchRides() {
       try {
-       const res = await fetch(`http://localhost:3001/api/rides?passenger_email=${encodeURIComponent(userEmail)}`);
-
+        const token = sessionStorage.getItem('authToken'); // Get JWT token
+        const res = await fetch(`${SOCKET_URL}/api/rides?passenger_email=${encodeURIComponent(userEmail)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         const data = await res.json();
-        setRides(data);
+        if (res.ok) setRides(data);
+        else console.error('Error fetching rides:', data.error || 'Unknown error');
       } catch (err) {
         console.error('Error fetching rides:', err);
       }
@@ -28,13 +32,15 @@ export default function RecentRides({ userEmail }) {
     fetchRides();
   }, [userEmail]);
 
-  // Real-time updates
+  // Real-time ride updates via Socket.IO
   useEffect(() => {
     if (!userEmail) return;
 
     socket.emit("joinRoom", userEmail);
 
     const handleRideUpdate = (rideData) => {
+      if (rideData.passenger_email !== userEmail) return;
+
       setRides(prevRides => {
         const index = prevRides.findIndex(r => r.id === rideData.id);
         if (index !== -1) {
@@ -47,10 +53,10 @@ export default function RecentRides({ userEmail }) {
       });
     };
 
-    socket.on("rideUpdate", handleRideUpdate);
+    socket.on("rideUpdated", handleRideUpdate);
 
     return () => {
-      socket.off("rideUpdate", handleRideUpdate);
+      socket.off("rideUpdated", handleRideUpdate);
       socket.emit("leaveRoom", userEmail);
     };
   }, [userEmail]);
@@ -99,7 +105,7 @@ export default function RecentRides({ userEmail }) {
               <ListItem alignItems="flex-start">
                 <ListItemText
                   primary={`${ride.passenger_name} (${ride.ride_type})`}
-                  secondary={`${ride.driver_name} |${ride.driver_vehicle} |${ride.pickup_location} → ${ride.dropoff_location} | Status: ${ride.status || 'pending'}`}
+                  secondary={`${ride.driver_name || 'Unassigned'} | ${ride.driver_vehicle || '-'} | ${ride.pickup_location} → ${ride.dropoff_location} | Status: ${ride.status || 'pending'}`}
                 />
               </ListItem>
               <Divider component="li" />
