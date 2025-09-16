@@ -55,61 +55,33 @@ export default function DriverDashboard() {
     setOpenDialog(false);
     setSelectedRide(null);
   };
-
   const toggleDrawer = (open) => () => setDrawerOpen(open);
 
-  // ✅ Load driver info from sessionStorage + backend DB
   useEffect(() => {
-    const initDriverInfo = async () => {
-      try {
-        // 1. Load from sessionStorage first
-        let savedDriver = sessionStorage.getItem("driverInfo");
-        let driver = savedDriver ? JSON.parse(savedDriver) : {};
-        driver.name = `${driver.first_name || ""} ${driver.last_name || ""}`.trim();
-
-        // 2. Fetch latest from DB if we have an authToken
-        const token = sessionStorage.getItem("authToken");
-        if (token) {
-          const res = await fetch("http://localhost:3001/api/drivers/me", {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-
-          if (res.ok) {
-            const dbDriver = await res.json();
-            driver = {
-              ...driver,
-              ...dbDriver,
-              name: `${dbDriver.first_name || driver.first_name || ""} ${dbDriver.last_name || driver.last_name || ""}`.trim(),
-            };
-            sessionStorage.setItem("driverInfo", JSON.stringify(driver));
-          }
-        }
-
-        setDriverInfo(driver);
-      } catch (err) {
-        console.error("Error loading driver info:", err);
-      }
-    };
-
-    initDriverInfo();
+    const savedDriver = sessionStorage.getItem("driverInfo");
+    if (savedDriver) {
+      const driver = JSON.parse(savedDriver);
+      driver.name = `${driver.first_name || ""} ${driver.last_name || ""}`.trim();
+      setDriverInfo(driver);
+    }
   }, []);
 
-  // ✅ Fetch rides
   useEffect(() => {
     if (!driverInfo.email) return;
 
     const fetchRides = async () => {
       try {
         const token = sessionStorage.getItem("authToken");
+        const baseUrl = process.env.REACT_APP_BACKEND_URL;
 
-        const pendingRes = await fetch("http://localhost:3001/api/rides", {
+        const pendingRes = await fetch(`${baseUrl}/api/rides`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const pendingData = await pendingRes.json();
         setPendingRides(pendingData.filter((r) => !r.driver_assigned));
 
         const activeRes = await fetch(
-          `http://localhost:3001/api/active-rides?driver_email=${driverInfo.email}`,
+          `${baseUrl}/api/active-rides?driver_email=${driverInfo.email}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         const activeData = (await activeRes.json()).filter((r) => r.status !== "completed");
@@ -117,14 +89,14 @@ export default function DriverDashboard() {
         setCurrentRide(activeData[0] || null);
 
         const completedRes = await fetch(
-          `http://localhost:3001/api/rides?driver_email=${driverInfo.email}&status=completed`,
+          `${baseUrl}/api/rides?driver_email=${driverInfo.email}&status=completed`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         const completedData = await completedRes.json();
         setCompletedRides(completedData);
 
         const canceledRes = await fetch(
-          `http://localhost:3001/api/rides?driver_email=${driverInfo.email}&status=canceled`,
+          `${baseUrl}/api/rides?driver_email=${driverInfo.email}&status=canceled`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         const canceledData = await canceledRes.json();
@@ -139,7 +111,6 @@ export default function DriverDashboard() {
     return () => clearInterval(interval);
   }, [driverInfo.email]);
 
-  // ✅ Socket new rides
   useEffect(() => {
     socket.on("newRide", (ride) => {
       if (!ride.driver_assigned) setPendingRides((prev) => [ride, ...prev]);
@@ -147,7 +118,6 @@ export default function DriverDashboard() {
     return () => socket.off("newRide");
   }, []);
 
-  // ✅ Socket ride updates
   useEffect(() => {
     if (!driverInfo.email) return;
     socket.emit("joinRoom", driverInfo.email);
@@ -189,7 +159,6 @@ export default function DriverDashboard() {
     };
   }, [driverInfo.email]);
 
-  // ✅ Accept ride
   const handleConfirmAccept = async () => {
     if (!selectedRide) return;
     if (activeRides.length > 0) {
@@ -200,19 +169,20 @@ export default function DriverDashboard() {
 
     try {
       const token = sessionStorage.getItem("authToken");
+      const baseUrl = process.env.REACT_APP_BACKEND_URL;
+
       const res = await fetch(
-        `http://localhost:3001/api/rides/${selectedRide.id || selectedRide._id}/accept`,
+        `${baseUrl}/api/rides/${selectedRide.id || selectedRide._id}/accept`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({
-            driver_name: driverInfo.name,
-            driver_email: driverInfo.email,
-            driver_phone: driverInfo.phone,
-            driver_vehicle: driverInfo.vehicle,
-          }),
+          headers: { 
+            "Content-Type": "application/json", 
+            Authorization: `Bearer ${token}` 
+          },
+          body: JSON.stringify(driverInfo),
         }
       );
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Accept failed");
 
@@ -227,20 +197,20 @@ export default function DriverDashboard() {
     }
   };
 
-  // ✅ Ride actions
   const handleRideAction = async (ride, action) => {
     try {
       const token = sessionStorage.getItem("authToken");
       const rideId = ride.id || ride._id;
+      const baseUrl = process.env.REACT_APP_BACKEND_URL;
       let url;
 
-      if (action === "start") url = `http://localhost:3001/api/rides/${rideId}/start`;
+      if (action === "start") url = `${baseUrl}/api/rides/${rideId}/start`;
       else if (action === "complete") {
         if (!window.confirm(`Complete ride #${rideId}?`)) return;
-        url = `http://localhost:3001/api/rides/${rideId}/complete`;
+        url = `${baseUrl}/api/rides/${rideId}/complete`;
       } else if (action === "cancel") {
         if (!window.confirm(`Cancel ride #${rideId}?`)) return;
-        url = `http://localhost:3001/api/rides/${rideId}/cancel`;
+        url = `${baseUrl}/api/rides/${rideId}/cancel`;
       } else throw new Error("Invalid action");
 
       const res = await fetch(url, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
@@ -254,7 +224,6 @@ export default function DriverDashboard() {
       alert(err.message);
     }
   };
-
   return (
     <Box sx={{ p: 0, bgcolor: "#f0f2f5", minHeight: "100vh" }}>
       {/* Header */}
@@ -308,7 +277,7 @@ export default function DriverDashboard() {
                 fontWeight: "bold",
                 "&:hover": { borderColor: "#f0f0f0", color: "#f0f0f0" },
               }}
-              onClick={() => navigate("/signin")}
+              onClick={() => navigate('/signin')}
             >
               Sign Out
             </Button>
@@ -329,17 +298,13 @@ export default function DriverDashboard() {
           <List>
             <ListItem disablePadding>
               <ListItemButton onClick={() => navigate("/")}>
-                <ListItemIcon>
-                  <HomeIcon />
-                </ListItemIcon>
+                <ListItemIcon><HomeIcon /></ListItemIcon>
                 <ListItemText primary="Home" />
               </ListItemButton>
             </ListItem>
             <ListItem disablePadding>
-              <ListItemButton onClick={() => navigate("/signout")}>
-                <ListItemIcon>
-                  <LogoutIcon />
-                </ListItemIcon>
+              <ListItemButton onClick={() => navigate('/signout')}>
+                <ListItemIcon><LogoutIcon /></ListItemIcon>
                 <ListItemText primary="Sign Out" />
               </ListItemButton>
             </ListItem>
@@ -349,8 +314,7 @@ export default function DriverDashboard() {
 
       {/* Driver Info */}
       <Typography variant="h6" gutterBottom sx={{ mt: 2, pl: isDesktop ? 5 : 3 }}>
-        Welcome, {driverInfo.name} ({driverInfo.email}) | Driver Phone:{" "}
-        {driverInfo.phone || "No phone number found"}
+        Welcome, {driverInfo.name} ({driverInfo.email}) | Driver Phone: {driverInfo.phone || "No phone number found"}
       </Typography>
 
       {/* Main Content */}
@@ -393,15 +357,11 @@ export default function DriverDashboard() {
             ) : (
               pendingRides.map((ride) => (
                 <Box key={ride.id} sx={{ border: "1px solid #ccc", borderRadius: 2, p: 2, mb: 2 }}>
-                  <Typography>
-                    #{ride.id} - {ride.passenger_name} ({ride.ride_type})
-                  </Typography>
+                  <Typography>#{ride.id} - {ride.passenger_name} ({ride.ride_type})</Typography>
                   <Typography>Pickup: {ride.pickup_location}</Typography>
                   <Typography>Dropoff: {ride.dropoff_location}</Typography>
                   <Typography>Fare: ${ride.price?.toFixed(2) || "0.00"}</Typography>
-                  <Button variant="contained" sx={{ mt: 1 }} onClick={() => handleOpenDialog(ride)}>
-                    Accept Ride
-                  </Button>
+                  <Button variant="contained" sx={{ mt: 1 }} onClick={() => handleOpenDialog(ride)}>Accept Ride</Button>
                 </Box>
               ))
             )}
@@ -430,9 +390,7 @@ export default function DriverDashboard() {
         <DialogContent>Are you sure you want to accept ride #{selectedRide?.id}?</DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button variant="contained" onClick={handleConfirmAccept}>
-            Confirm
-          </Button>
+          <Button variant="contained" onClick={handleConfirmAccept}>Confirm</Button>
         </DialogActions>
       </Dialog>
     </Box>
