@@ -365,7 +365,7 @@ useEffect(() => {
                   <Typography>#{ride.id} - {ride.passenger_name} ({ride.ride_type})</Typography>
                   <Typography>Pickup: {ride.pickup_location}</Typography>
                   <Typography>Dropoff: {ride.dropoff_location}</Typography>
-                 <Typography>Fare:  ₺{ride.price?.toFixed(2) || "0.00"}</Typography>
+                 <Typography>Fare:  ₺{ride.ride_price?.toFixed(2) || "0.00"}</Typography>
                   <Button variant="contained" sx={{ mt: 1 }} onClick={() => handleOpenDialog(ride)}>Accept Ride</Button>
                 </Box>
               ))

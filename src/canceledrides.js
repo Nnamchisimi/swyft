@@ -54,7 +54,7 @@ export default function CanceledRides({ rides }) {
               </Typography>
               <Typography>Pickup: {ride.pickup_location}</Typography>
               <Typography>Dropoff: {ride.dropoff_location}</Typography>
-              <Typography>Fare: ₺{ride.price?.toFixed(2) || "0.00"}</Typography>
+              <Typography>Fare: ₺{ride.ride_price?.toFixed(2) || "0.00"}</Typography>
               {ride.canceled_at && (
                 <Typography variant="caption" color="text.secondary">
                   Canceled at: {new Date(ride.canceled_at).toLocaleString()}
