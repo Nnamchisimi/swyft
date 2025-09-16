@@ -224,6 +224,7 @@ app.post('/api/rides', async (req, res) => {
 });
 
 // Accept ride
+// Accept ride
 app.post('/api/rides/:rideId/accept', async (req, res) => {
   const { rideId } = req.params;
   const { email, phone } = req.body;
@@ -233,7 +234,7 @@ app.post('/api/rides/:rideId/accept', async (req, res) => {
     const driver = await User.findOne({ email, role: 'Driver' });
     if (!driver) return res.status(404).json({ error: 'Driver not found' });
 
-    // Use correct field names from DB
+    // Use database field names
     const driverName = `${driver.first_name} ${driver.last_name}`.trim();
     const driverVehicle = driver.vehicle_plate;
 
@@ -259,6 +260,7 @@ app.post('/api/rides/:rideId/accept', async (req, res) => {
     res.status(500).json({ error: 'Failed to accept ride' });
   }
 });
+
 
 
 // Start, complete, cancel rides and driver location updates
