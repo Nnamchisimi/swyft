@@ -57,14 +57,19 @@ export default function DriverDashboard() {
   };
   const toggleDrawer = (open) => () => setDrawerOpen(open);
 
-  useEffect(() => {
-    const savedDriver = sessionStorage.getItem("driverInfo");
-    if (savedDriver) {
-      const driver = JSON.parse(savedDriver);
-      driver.name = `${driver.first_name || ""} ${driver.last_name || ""}`.trim();
-      setDriverInfo(driver);
-    }
-  }, []);
+useEffect(() => {
+  const savedDriver = sessionStorage.getItem("driverInfo");
+  if (savedDriver) {
+    const driver = JSON.parse(savedDriver);
+
+    // Use consistent field names from backend
+    driver.name = `${driver.firstName || ""} ${driver.lastName || ""}`.trim();
+
+    setDriverInfo(driver);
+  }
+}, []);
+
+
 
   useEffect(() => {
     if (!driverInfo.email) return;
@@ -360,7 +365,7 @@ export default function DriverDashboard() {
                   <Typography>#{ride.id} - {ride.passenger_name} ({ride.ride_type})</Typography>
                   <Typography>Pickup: {ride.pickup_location}</Typography>
                   <Typography>Dropoff: {ride.dropoff_location}</Typography>
-                  <Typography>Fare: ${ride.price?.toFixed(2) || "0.00"}</Typography>
+                 <Typography>Fare: ${ride.ride_price?.toFixed(2) || "0.00"}</Typography>
                   <Button variant="contained" sx={{ mt: 1 }} onClick={() => handleOpenDialog(ride)}>Accept Ride</Button>
                 </Box>
               ))
