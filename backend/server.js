@@ -1,4 +1,6 @@
 const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
 const mysql = require('mysql2');
 const cors = require('cors');
 const nodemailer = require('nodemailer');
@@ -7,36 +9,33 @@ const bcrypt = require('bcrypt');
 require('dotenv').config();
 
 const app = express();
-app.use(cors());
 app.use(express.json());
 
+// CORS
 const corsOptions = {
-  origin: "https://swyft-7.onrender.com", // your frontend URL
-  methods: ["GET", "POST"],
+  origin: "https://swyft-7.onrender.com", // frontend
+  methods: ["GET", "POST", "PUT", "DELETE"],
 };
-
 app.use(cors(corsOptions));
 
-const io = new Server(server, {
-  cors: corsOptions,
-});
+// Create HTTP server for Socket.IO
+const server = http.createServer(app);
+const io = new Server(server, { cors: corsOptions });
 
-
+// Socket.IO connection
 io.on("connection", (socket) => {
   console.log("Client connected");
-
   socket.on("joinRoom", (email) => socket.join(email));
   socket.on("leaveRoom", (email) => socket.leave(email));
-
   socket.on("newRide", (ride) => io.emit("newRide", ride));
   socket.on("rideUpdated", (ride) => {
     io.emit("rideUpdated", ride);
     if (ride.passenger_email) io.to(ride.passenger_email).emit("rideUpdated", ride);
   });
-
   socket.on("disconnect", () => console.log("Client disconnected"));
 });
 
+// MySQL connection
 const db = mysql.createConnection({
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
@@ -44,15 +43,20 @@ const db = mysql.createConnection({
   database: process.env.DB_NAME || 'swyft',
   port: process.env.DB_PORT || 3306,
 });
-
 db.connect(err => {
   if (err) return console.error('Database connection failed:', err.stack);
   console.log('Connected to MySQL database.');
 });
 
+// Nodemailer setup
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+});
+
+// Friendly root route
+app.get('/', (req, res) => {
+  res.send('<h2>SWYFT Backend is running!</h2><p>Frontend: <a href="https://swyft-7.onrender.com">Go to SWYFT</a></p>');
 });
 
 // ====== USER SIGNUP ======
@@ -309,15 +313,6 @@ app.get('/api/active-rides', (req, res) => {
     if (err) return res.status(500).json({ error: 'Failed to fetch active rides' });
     res.json(results);
   });
-});
-
-const path = require('path');
-
-// Serve React frontend
-app.use(express.static(path.join(__dirname, '../build')));
-
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../build', 'index.html'));
 });
 
 
