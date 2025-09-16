@@ -13,7 +13,7 @@ app.use(express.json());
 
 // CORS
 const corsOptions = {
-  origin: "https://swyft-7.onrender.com", // frontend
+  origin: "https://swyft-7.onrender.com",
   methods: ["GET", "POST", "PUT", "DELETE"],
 };
 app.use(cors(corsOptions));
@@ -29,7 +29,7 @@ io.on("connection", (socket) => {
   socket.on("newRide", (ride) => io.emit("newRide", ride));
   socket.on("rideUpdated", (ride) => {
     io.emit("rideUpdated", ride);
-    if (ride.passengerEmail) io.to(ride.passengerEmail).emit("rideUpdated", ride);
+    if (ride.passenger_email) io.to(ride.passenger_email).emit("rideUpdated", ride);
   });
   socket.on("driverLocationUpdated", (data) => io.emit("driverLocationUpdated", data));
   socket.on("disconnect", () => console.log("Client disconnected"));
@@ -53,24 +53,24 @@ const userSchema = new mongoose.Schema({
 });
 
 const rideSchema = new mongoose.Schema({
-  passengerName: String,
-  passengerEmail: String,
-  passengerPhone: String,
-  pickup: String,
-  dropoff: String,
-  rideType: String,
-  ridePrice: Number,
-  driverName: String,
-  driverEmail: String,
-  driverPhone: String,
-  driverVehicle: String,
-  driverAssigned: { type: Boolean, default: false },
+  passenger_name: String,
+  passenger_email: String,
+  passenger_phone: String,
+  pickup_location: String,
+  dropoff_location: String,
+  ride_type: String,
+  ride_price: Number,
+  driver_name: String,
+  driver_email: String,
+  driver_phone: String,
+  driver_vehicle: String,
+  driver_assigned: { type: Boolean, default: false },
   status: { type: String, default: 'pending' },
-  createdAt: { type: Date, default: Date.now },
-  completedAt: Date,
-  canceledAt: Date,
-  driverLat: Number,
-  driverLng: Number
+  created_at: { type: Date, default: Date.now },
+  completed_at: Date,
+  canceled_at: Date,
+  driver_lat: Number,
+  driver_lng: Number
 });
 
 const emailTokenSchema = new mongoose.Schema({
@@ -194,14 +194,14 @@ app.get('/api/drivers', async (req, res) => {
 // ====== RIDES ======
 // Get rides
 app.get('/api/rides', async (req, res) => {
-  const { passengerEmail, driverEmail, status } = req.query;
+  const { passenger_email, driver_email, status } = req.query;
   const filter = {};
-  if (passengerEmail) filter.passengerEmail = passengerEmail;
-  if (driverEmail) filter.driverEmail = driverEmail;
+  if (passenger_email) filter.passenger_email = passenger_email;
+  if (driver_email) filter.driver_email = driver_email;
   if (status) filter.status = { $in: status.split(',').map(s => s.trim()) };
 
   try {
-    const rides = await Ride.find(filter).sort({ createdAt: -1 });
+    const rides = await Ride.find(filter).sort({ created_at: -1 });
     res.json(rides);
   } catch {
     res.status(500).json({ error: 'Failed to fetch rides' });
@@ -210,12 +210,12 @@ app.get('/api/rides', async (req, res) => {
 
 // Create ride
 app.post('/api/rides', async (req, res) => {
-  const { passengerName, passengerEmail, passengerPhone, pickup, dropoff, rideType, ridePrice } = req.body;
-  if (!passengerName || !passengerEmail || !passengerPhone || !pickup || !dropoff || !rideType || ridePrice == null)
+  const { passenger_name, passenger_email, passenger_phone, pickup_location, dropoff_location, ride_type, ride_price } = req.body;
+  if (!passenger_name || !passenger_email || !passenger_phone || !pickup_location || !dropoff_location || !ride_type || ride_price == null)
     return res.status(400).json({ error: 'Please provide all required fields' });
 
   try {
-    const ride = await Ride.create({ passengerName, passengerEmail, passengerPhone, pickup, dropoff, rideType, ridePrice });
+    const ride = await Ride.create({ passenger_name, passenger_email, passenger_phone, pickup_location, dropoff_location, ride_type, ride_price });
     io.emit('newRide', ride);
     res.status(201).json({ message: 'Ride booked successfully', rideId: ride._id });
   } catch (err) {
@@ -233,18 +233,18 @@ app.post('/api/rides/:rideId/accept', async (req, res) => {
     if (!driver) return res.status(404).json({ error: 'Driver not found' });
 
     const ride = await Ride.findByIdAndUpdate(rideId, {
-      driverName: `${driver.firstName} ${driver.lastName}`,
-      driverEmail: driver.email,
-      driverPhone: phone,
-      driverVehicle: driver.vehicle,
-      driverAssigned: true,
+      driver_name: `${driver.firstName} ${driver.lastName}`,
+      driver_email: driver.email,
+      driver_phone: phone,
+      driver_vehicle: driver.vehicle,
+      driver_assigned: true,
       status: 'accepted'
     }, { new: true });
 
     io.emit('rideUpdated', ride);
-    if (ride.passengerEmail) io.to(ride.passengerEmail).emit('rideUpdated', ride);
+    if (ride.passenger_email) io.to(ride.passenger_email).emit('rideUpdated', ride);
 
-    res.json({ message: 'Ride accepted successfully', rideId, driverName: ride.driverName, vehicle: ride.driverVehicle });
+    res.json({ message: 'Ride accepted successfully', rideId, driver_name: ride.driver_name, vehicle: ride.driver_vehicle });
   } catch (err) {
     res.status(500).json({ error: 'Failed to accept ride' });
   }
@@ -254,9 +254,9 @@ app.post('/api/rides/:rideId/accept', async (req, res) => {
 app.post('/api/rides/:id/start', async (req, res) => {
   try {
     const ride = await Ride.findByIdAndUpdate(req.params.id, { status: 'in_progress' }, { new: true });
-    if (!ride || !ride.driverAssigned) return res.status(400).json({ error: 'Cannot start ride' });
+    if (!ride || !ride.driver_assigned) return res.status(400).json({ error: 'Cannot start ride' });
     io.emit('rideUpdated', ride);
-    if (ride.passengerEmail) io.to(ride.passengerEmail).emit('rideUpdated', ride);
+    if (ride.passenger_email) io.to(ride.passenger_email).emit('rideUpdated', ride);
     res.json({ message: 'Ride started', rideId: ride._id });
   } catch { res.status(500).json({ error: 'Server error' }); }
 });
@@ -265,12 +265,12 @@ app.post('/api/rides/:id/complete', async (req, res) => {
   try {
     const ride = await Ride.findOneAndUpdate(
       { _id: req.params.id, status: { $in: ['accepted', 'in_progress'] } },
-      { status: 'completed', completedAt: new Date() },
+      { status: 'completed', completed_at: new Date() },
       { new: true }
     );
     if (!ride) return res.status(400).json({ error: 'Cannot complete ride' });
     io.emit('rideUpdated', ride);
-    if (ride.passengerEmail) io.to(ride.passengerEmail).emit('rideUpdated', ride);
+    if (ride.passenger_email) io.to(ride.passenger_email).emit('rideUpdated', ride);
     res.json({ message: 'Ride completed', ride });
   } catch { res.status(500).json({ error: 'Server error' }); }
 });
@@ -278,13 +278,13 @@ app.post('/api/rides/:id/complete', async (req, res) => {
 app.post('/api/rides/:id/cancel', async (req, res) => {
   try {
     const ride = await Ride.findOneAndUpdate(
-      { _id: req.params.id, driverAssigned: true },
-      { status: 'canceled', canceledAt: new Date() },
+      { _id: req.params.id, driver_assigned: true },
+      { status: 'cancelled', canceled_at: new Date() },
       { new: true }
     );
     if (!ride) return res.status(404).json({ error: 'Ride not found or cannot cancel' });
     io.emit('rideUpdated', ride);
-    if (ride.passengerEmail) io.to(ride.passengerEmail).emit('rideUpdated', ride);
+    if (ride.passenger_email) io.to(ride.passenger_email).emit('rideUpdated', ride);
     res.json({ message: 'Ride canceled successfully', ride });
   } catch { res.status(500).json({ error: 'Server error' }); }
 });
@@ -295,24 +295,24 @@ app.post('/api/rides/:id/driver-location', async (req, res) => {
 
   try {
     const ride = await Ride.findOneAndUpdate(
-      { _id: req.params.id, driverAssigned: true, status: { $in: ['accepted', 'in_progress'] } },
-      { driverLat: lat, driverLng: lng },
+      { _id: req.params.id, driver_assigned: true, status: { $in: ['accepted', 'in_progress'] } },
+      { driver_lat: lat, driver_lng: lng },
       { new: true }
     );
     if (!ride) return res.status(400).json({ error: 'Cannot update location' });
     io.emit('driverLocationUpdated', { rideId: ride._id, lat, lng });
-    if (ride.passengerEmail) io.to(ride.passengerEmail).emit('driverLocationUpdated', { rideId: ride._id, lat, lng });
+    if (ride.passenger_email) io.to(ride.passenger_email).emit('driverLocationUpdated', { rideId: ride._id, lat, lng });
     res.json({ message: 'Driver location updated', rideId: ride._id });
   } catch { res.status(500).json({ error: 'Server error' }); }
 });
 
 // Active rides for driver
 app.get('/api/active-rides', async (req, res) => {
-  const { driverEmail } = req.query;
-  if (!driverEmail) return res.status(400).json({ error: 'driverEmail is required' });
+  const { driver_email } = req.query;
+  if (!driver_email) return res.status(400).json({ error: 'driver_email is required' });
 
   try {
-    const rides = await Ride.find({ driverEmail, driverAssigned: true, status: { $in: ['accepted', 'in_progress'] } }).sort({ createdAt: -1 });
+    const rides = await Ride.find({ driver_email, driver_assigned: true, status: { $in: ['accepted', 'in_progress'] } }).sort({ created_at: -1 });
     res.json(rides);
   } catch { res.status(500).json({ error: 'Failed to fetch active rides' }); }
 });
