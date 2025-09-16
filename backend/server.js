@@ -49,7 +49,7 @@ const userSchema = new mongoose.Schema({
   role: String,
   phone: String,
   vehicle: String,
-  isVerified: { type: Boolean, default: false }
+  is_Verified: { type: Boolean, default: false }
 });
 
 const rideSchema = new mongoose.Schema({
@@ -109,7 +109,7 @@ app.post('/api/users', async (req, res) => {
     if (existing) return res.status(400).json({ error: 'Email already exists' });
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({ firstName, lastName, email, password: hashedPassword, role, phone, vehicle, isVerified: false });
+    const user = await User.create({ firstName, lastName, email, password: hashedPassword, role, phone, vehicle, is_Verified: false });
 
     // Create verification token
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
@@ -142,7 +142,7 @@ app.get('/api/users/verify', async (req, res) => {
     const record = await EmailToken.findOne({ token, expiresAt: { $gt: new Date() } });
     if (!record) return res.send('<h3>Invalid or expired token</h3>');
 
-    await User.findByIdAndUpdate(decoded.id, { isVerified: true });
+    await User.findByIdAndUpdate(decoded.id, { is_Verified: true });
     await EmailToken.deleteOne({ token });
     res.redirect(`${process.env.REACT_APP_FRONTEND_URL}/signin`);
   } catch {
@@ -158,7 +158,7 @@ app.post('/api/users/login', async (req, res) => {
   try {
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ error: 'User not found' });
-    if (!user.isVerified) return res.status(403).json({ error: 'Email not verified' });
+    if (!user.is_Verified) return res.status(403).json({ error: 'Email not verified' });
 
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ error: 'Incorrect password' });
