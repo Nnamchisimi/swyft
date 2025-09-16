@@ -6,69 +6,97 @@ export default function ActiveRides({ rides, onCancelRide, onCompleteRide }) {
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
 
   return (
-    <Box sx={{
-         width: isDesktop ? "70%" : "100%",   // take 70% of screen width on desktop
-    maxWidth: isDesktop ? "600px" : "450px", // cap it at 1000px on desktop, 500px on mobile
-    minWidth: isDesktop ? "600px" : "450px", // cap it at 1000px on desktop, 500px on mobile
-     maxHeight: 500,
-      minHeight: 400,    // ✅ Always at least 400px tall
-      border: "1px solid #ccc",
-      borderRadius: 3,
-      p: 0,
-      mt: isDesktop ? 2 : 0,
-      ml: isDesktop ? 4 : 0,
-
-      overflowY: "auto",
-      bgcolor: "#f5f5f5",
-    }}>
-      <Box sx={{ 
-        width: "100%", 
-        bgcolor: "#82b1ff", 
-        color: "white", 
-        p: 2, 
-        fontWeight: "bold", 
-        fontSize: isDesktop ? "1.25rem" : "1rem", 
-        textAlign: "left", 
-        borderTopLeftRadius: 12, 
-        borderTopRightRadius: 12, 
-        position: "sticky", 
-        top: 0, 
-        zIndex: 1 
-      }}>
+    <Box sx={{ width: isDesktop ? 500 : "100%" }}>
+      {/* Header */}
+      <Box
+        sx={{
+          bgcolor: "#82b1ff",
+          color: "white",
+          p: 2,
+          fontWeight: "bold",
+          fontSize: isDesktop ? "1.25rem" : "1rem",
+          borderTopLeftRadius: 12,
+          borderTopRightRadius: 12,
+        }}
+      >
         Active Rides
       </Box>
-      <List sx={{ p: 2 }}>
+
+      {/* Content */}
+      <Box
+        sx={{
+          border: "1px solid #ccc",
+          borderRadius: 3,
+          p: 2,
+          bgcolor: "#f5f5f5",
+          maxHeight: 500,
+          minHeight: 400,
+          overflowY: "auto",
+        }}
+      >
         {rides.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">No active rides.</Typography>
+          <Typography variant="body2" color="text.secondary">
+            No active rides.
+          </Typography>
         ) : (
           rides.map((ride) => (
-            <React.Fragment key={ride.id || ride._id}>
-              <ListItem alignItems="flex-start" sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexDirection: isDesktop ? "row" : "column" }}>
-                <ListItemText
-                  primary={`#${ride.id || ride._id} - ${ride.passenger_name} (${ride.ride_type})`}
-                  secondary={
-                    <>
-                      <Typography variant="body2" color="textSecondary">From: {ride.pickup_location}</Typography>
-                      <Typography variant="body2" color="textSecondary">To: {ride.dropoff_location}</Typography>
-                      <Typography variant="body2" color="textSecondary">Passenger: {ride.passenger_name} - {ride.passenger_phone}</Typography>
-                      <Typography variant="body2" color="textSecondary">Driver: {ride.driver_name || "—"}</Typography>
-                      <Typography variant="body2" color="textSecondary">Driver Phone: {ride.driver_phone || "—"}</Typography>
-                      <Typography variant="body2" color="textSecondary">Vehicle: {ride.driver_vehicle || "—"}</Typography>
-                      <Typography variant="body2" color="textSecondary">Requested: {new Date(ride.created_at).toLocaleString()}</Typography>
-                      <Typography variant="body2" color="textSecondary">Fare: ₺{ride.price?.toFixed(2) || "0.00"}</Typography>
-                    </>
-                  }
-                />
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mt: isDesktop ? 0 : 1 }}>
-                  <Button variant="outlined" color="error" size="small" onClick={() => onCancelRide(ride)}>Cancel Ride</Button>
-                  <Button variant="contained" color="success" size="small" onClick={() => onCompleteRide(ride)}>Complete Ride</Button>
-                </Box>
-              </ListItem>
-              <Divider component="li" />
-            </React.Fragment>
+            <Box
+              key={ride.id || ride._id}
+              sx={{
+                border: "1px solid #ccc",
+                borderRadius: 2,
+                p: 2,
+                mb: 2,
+              }}
+            >
+              <Typography fontWeight="bold">
+                #{ride.id || ride._id} - {ride.passenger_name} ({ride.ride_type})
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                From: {ride.pickup_location}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                To: {ride.dropoff_location}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Passenger: {ride.passenger_name} - {ride.passenger_phone}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Driver: {ride.driver_name || "—"} | {ride.driver_phone || "—"}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Vehicle: {ride.driver_vehicle || "—"}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Requested: {new Date(ride.created_at).toLocaleString()}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Fare: ₺{ride.price?.toFixed(2) || "0.00"}
+              </Typography>
+
+              {/* Action Buttons */}
+              <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  size="small"
+                  onClick={() => onCancelRide(ride)}
+                >
+                  Cancel Ride
+                </Button>
+                <Button
+                  variant="contained"
+                  color="success"
+                  size="small"
+                  onClick={() => onCompleteRide(ride)}
+                >
+                  Complete Ride
+                </Button>
+              </Box>
+            </Box>
           ))
         )}
-      </List>
+      </Box>
     </Box>
   );
 }
