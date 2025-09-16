@@ -101,7 +101,7 @@ useEffect(() => {
         setCompletedRides(completedData);
 
         const canceledRes = await fetch(
-          `${baseUrl}/api/rides?driver_email=${driverInfo.email}&status=canceled`,
+          `${baseUrl}/api/rides?driver_email=${driverInfo.email}&status=cancelled`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         const canceledData = await canceledRes.json();
