@@ -224,7 +224,6 @@ app.post('/api/rides', async (req, res) => {
 });
 
 // Accept ride
-// Accept ride
 app.post('/api/rides/:rideId/accept', async (req, res) => {
   const { rideId } = req.params;
   const { email, phone } = req.body;
@@ -287,23 +286,19 @@ app.post('/api/rides/:id/complete', async (req, res) => {
   } catch { res.status(500).json({ error: 'Server error' }); }
 });
 
-// Cancel ride
 app.post('/api/rides/:id/cancel', async (req, res) => {
   try {
     const ride = await Ride.findOneAndUpdate(
       { _id: req.params.id, driver_assigned: true },
-      { status: 'canceled', canceled_at: new Date() },
+      { status: 'cancelled', canceled_at: new Date() },
       { new: true }
     );
     if (!ride) return res.status(404).json({ error: 'Ride not found or cannot cancel' });
     io.emit('rideUpdated', ride);
     if (ride.passenger_email) io.to(ride.passenger_email).emit('rideUpdated', ride);
     res.json({ message: 'Ride canceled successfully', ride });
-  } catch {
-    res.status(500).json({ error: 'Server error' });
-  }
+  } catch { res.status(500).json({ error: 'Server error' }); }
 });
-
 
 app.post('/api/rides/:id/driver-location', async (req, res) => {
   const { lat, lng } = req.body;
