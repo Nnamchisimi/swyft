@@ -18,7 +18,7 @@ export default function PassengerMap({ passengerEmail, pickupLocation, dropoffLo
   const mapRef = useRef(null);
 
   const { isLoaded } = useJsApiLoader({
-    googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_KEY || "YOUR_GOOGLE_MAPS_API_KEY",
+    googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_KEY ||  "AIzaSyAcngMU7US6QjMQ5R9DRLhDhvCEqwCxsWo",
     libraries: ["places"],
   });
 
