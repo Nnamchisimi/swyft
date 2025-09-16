@@ -10,13 +10,17 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const http = require("http");
-const { Server } = require("socket.io");
-const server = http.createServer(app);
+const corsOptions = {
+  origin: "https://swyft-7.onrender.com", // your frontend URL
+  methods: ["GET", "POST"],
+};
+
+app.use(cors(corsOptions));
 
 const io = new Server(server, {
-  cors: { origin: "http://localhost:3003", methods: ["GET","POST"] },
+  cors: corsOptions,
 });
+
 
 io.on("connection", (socket) => {
   console.log("Client connected");
@@ -319,6 +323,8 @@ app.get('*', (req, res) => {
 
 
 // Start server
+// KEEP this
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
 
