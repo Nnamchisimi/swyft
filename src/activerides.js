@@ -70,9 +70,7 @@ export default function ActiveRides({ rides, onCancelRide, onCompleteRide }) {
               <Typography variant="body2" color="textSecondary">
                 Requested: {new Date(ride.created_at).toLocaleString()}
               </Typography>
-              <Typography variant="body2" color="textSecondary">
-                Fare: ₺{ride.price?.toFixed(2) || "0.00"}
-              </Typography>
+                 <Typography>Fare: ₺{ride.ride_price?.toFixed(2) || "0.00"}</Typography>
 
               {/* Action Buttons */}
               <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
