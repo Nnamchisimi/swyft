@@ -194,11 +194,20 @@ export default function PassengerDashboard() {
     }
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/rides`, {
+          const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/rides`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ passengerName, passengerEmail, passengerPhone, pickup, dropoff, rideType, ridePrice }),
+        body: JSON.stringify({
+          passenger_name: passengerName,
+          passenger_email: passengerEmail,
+          passenger_phone: passengerPhone,
+          pickup_location: pickup,
+          dropoff_location: dropoff,
+          ride_type: rideType,
+          ride_price: ridePrice
+        }),
       });
+
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Booking failed');
 
@@ -233,7 +242,9 @@ export default function PassengerDashboard() {
 
   const handleCancelRide = async () => {
     try {
-      await fetch(`http://localhost:3001/api/rides/${rideToConfirm.id}/cancel`, { method: 'POST' });
+      await 
+      
+      (`http://localhost:3001/api/rides/${rideToConfirm.id}/cancel`, { method: 'POST' });
       setOpenConfirmDialog(false);
       setSnackbar({ open: true, message: `Ride #${rideToConfirm.id} cancelled`, severity: 'error' });
       setSelectedRide(null);
