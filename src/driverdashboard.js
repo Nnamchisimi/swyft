@@ -57,21 +57,20 @@ export default function DriverDashboard() {
   };
   const toggleDrawer = (open) => () => setDrawerOpen(open);
 
-  // Load driver info from sessionStorage and map DB fields
-  useEffect(() => {
-    const savedDriver = sessionStorage.getItem("driverInfo");
-    if (savedDriver) {
-      const driver = JSON.parse(savedDriver);
-      setDriverInfo({
-        email: driver.email,
-        phone: driver.phone,
-        name: `${driver.first_name || ""} ${driver.last_name || ""}`.trim(),
-        vehicle: driver.vehicle_plate || "",
-      });
-    }
-  }, []);
+useEffect(() => {
+  const savedDriver = sessionStorage.getItem("driverInfo");
+  if (savedDriver) {
+    const driver = JSON.parse(savedDriver);
 
-  // Fetch rides periodically
+    // Use consistent field names from backend
+    driver.name = `${driver.first_name || ""} ${driver.last_name || ""}`.trim();
+
+    setDriverInfo(driver);
+  }
+}, []);
+
+
+
   useEffect(() => {
     if (!driverInfo.email) return;
 
@@ -98,13 +97,15 @@ export default function DriverDashboard() {
           `${baseUrl}/api/rides?driver_email=${driverInfo.email}&status=completed`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        setCompletedRides(await completedRes.json());
+        const completedData = await completedRes.json();
+        setCompletedRides(completedData);
 
         const canceledRes = await fetch(
           `${baseUrl}/api/rides?driver_email=${driverInfo.email}&status=cancelled`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        setCanceledRides(await canceledRes.json());
+        const canceledData = await canceledRes.json();
+        setCanceledRides(canceledData);
       } catch (err) {
         console.error(err);
       }
@@ -115,7 +116,6 @@ export default function DriverDashboard() {
     return () => clearInterval(interval);
   }, [driverInfo.email]);
 
-  // Listen for new rides
   useEffect(() => {
     socket.on("newRide", (ride) => {
       if (!ride.driver_assigned) setPendingRides((prev) => [ride, ...prev]);
@@ -123,7 +123,6 @@ export default function DriverDashboard() {
     return () => socket.off("newRide");
   }, []);
 
-  // Listen for ride updates
   useEffect(() => {
     if (!driverInfo.email) return;
     socket.emit("joinRoom", driverInfo.email);
@@ -165,7 +164,6 @@ export default function DriverDashboard() {
     };
   }, [driverInfo.email]);
 
-  // Accept a ride
   const handleConfirmAccept = async () => {
     if (!selectedRide) return;
     if (activeRides.length > 0) {
@@ -186,10 +184,7 @@ export default function DriverDashboard() {
             "Content-Type": "application/json", 
             Authorization: `Bearer ${token}` 
           },
-          body: JSON.stringify({
-            email: driverInfo.email,
-            phone: driverInfo.phone,
-          }),
+          body: JSON.stringify(driverInfo),
         }
       );
 
@@ -207,7 +202,6 @@ export default function DriverDashboard() {
     }
   };
 
-  // Start, complete, cancel ride
   const handleRideAction = async (ride, action) => {
     try {
       const token = sessionStorage.getItem("authToken");
@@ -235,7 +229,6 @@ export default function DriverDashboard() {
       alert(err.message);
     }
   };
-
   return (
     <Box sx={{ p: 0, bgcolor: "#f0f2f5", minHeight: "100vh" }}>
       {/* Header */}
@@ -263,6 +256,7 @@ export default function DriverDashboard() {
           </span>
         </Box>
 
+        {/* Desktop Buttons */}
         {isDesktop && (
           <Box sx={{ display: "flex", gap: 2, mr: 10 }}>
             <Button
@@ -295,6 +289,7 @@ export default function DriverDashboard() {
           </Box>
         )}
 
+        {/* Mobile Hamburger */}
         {!isDesktop && (
           <IconButton color="inherit" sx={{ ml: "auto" }} onClick={toggleDrawer(true)}>
             <MenuIcon />
@@ -366,11 +361,11 @@ export default function DriverDashboard() {
               <Typography>No pending rides</Typography>
             ) : (
               pendingRides.map((ride) => (
-                <Box key={ride.id || ride._id} sx={{ border: "1px solid #ccc", borderRadius: 2, p: 2, mb: 2 }}>
-                  <Typography>#{ride.id || ride._id} - {ride.passenger_name} ({ride.ride_type})</Typography>
+                <Box key={ride.id} sx={{ border: "1px solid #ccc", borderRadius: 2, p: 2, mb: 2 }}>
+                  <Typography>#{ride.id} - {ride.passenger_name} ({ride.ride_type})</Typography>
                   <Typography>Pickup: {ride.pickup_location}</Typography>
                   <Typography>Dropoff: {ride.dropoff_location}</Typography>
-                  <Typography>Fare: ₺{ride.ride_price?.toFixed(2) || "0.00"}</Typography>
+                 <Typography>Fare:  ₺{ride.ride_price?.toFixed(2) || "0.00"}</Typography>
                   <Button variant="contained" sx={{ mt: 1 }} onClick={() => handleOpenDialog(ride)}>Accept Ride</Button>
                 </Box>
               ))
@@ -397,7 +392,7 @@ export default function DriverDashboard() {
       {/* Accept Ride Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog}>
         <DialogTitle>Accept Ride</DialogTitle>
-        <DialogContent>Are you sure you want to accept ride #{selectedRide?.id || selectedRide?._id}?</DialogContent>
+        <DialogContent>Are you sure you want to accept ride #{selectedRide?.id}?</DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Cancel</Button>
           <Button variant="contained" onClick={handleConfirmAccept}>Confirm</Button>
