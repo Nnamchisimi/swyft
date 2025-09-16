@@ -234,8 +234,8 @@ app.post('/api/rides/:rideId/accept', async (req, res) => {
     if (!driver) return res.status(404).json({ error: 'Driver not found' });
 
     // Use correct field names from DB
-    const driverName = `${driver.firstName} ${driver.lastName}`.trim();
-    const driverVehicle = driver.vehicle;
+    const driverName = `${driver.first_name} ${driver.last_name}`.trim();
+    const driverVehicle = driver.vehicle_plate;
 
     const ride = await Ride.findByIdAndUpdate(
       rideId,
