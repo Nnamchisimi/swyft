@@ -456,7 +456,7 @@ export default function HomePage() {
     }}
   >
     <Typography
-      variant="h6"
+      variant="h4"
       fontWeight="bold"
       gutterBottom
       sx={{ color: '#4e4e4eff' }}
