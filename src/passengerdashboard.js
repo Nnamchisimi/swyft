@@ -102,26 +102,36 @@ export default function PassengerDashboard() {
   const ridePrices = { economy: 150, premium: 200, luxury: 300 };
 
   // ------------------ Fetch logged-in user info ------------------
-  useEffect(() => {
-    async function fetchUserProfile() {
-      try {
-        const token = sessionStorage.getItem('authToken');
-        const res = await fetch('http://localhost:3001/api/user/profile', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        if (res.ok && data.email) {
-          setPassengerEmail(data.email);
-          setPassengerName(data.first_name || '');
-          setPassengerPhone(data.phone || '');
-          sessionStorage.setItem('userEmail', data.email);
+useEffect(() => {
+  const fetchUserProfile = async () => {
+    try {
+      const token = sessionStorage.getItem('authToken');
+      if (!token) return;
+
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/user/profile`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
-      } catch (err) {
-        console.error(err);
+      });
+
+      if (!response.ok) return;
+
+      const data = await response.json();
+      if (data) {
+        setPassengerName(`${data.firstName} ${data.lastName}`.trim());
+        setPassengerEmail(data.email || '');
+        setPassengerPhone(data.phone || '');
       }
+    } catch (error) {
+      console.error(error);
     }
-    fetchUserProfile();
-  }, []);
+  };
+
+  fetchUserProfile();
+}, []);
+
 
   // ------------------ Listen for ride updates ------------------
   useEffect(() => {
