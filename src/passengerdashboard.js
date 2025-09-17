@@ -109,7 +109,7 @@ useEffect(() => {
         const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/users/by-email?email=${passengerEmail}`);
         const data = await res.json();
         if (res.ok) {
-          setPassengerName(data.name);
+          setPassengerName(data.first_name);
           if (data.phone) setPassengerPhone(data.phone);
         }
       } catch (err) {
