@@ -101,42 +101,36 @@ export default function PassengerDashboard() {
 
   const ridePrices = { economy: 150, premium: 200, luxury: 300 };
 
-  // ---------------- Fetch user info ----------------
+  // Fetch user info
   useEffect(() => {
     const savedEmail = sessionStorage.getItem('userEmail');
-    const savedFirstName = sessionStorage.getItem('userFirstName');
-    const savedPhone = sessionStorage.getItem('userPhone');
-
     if (savedEmail) setPassengerEmail(savedEmail);
-    if (savedFirstName) setPassengerName(savedFirstName);
-    if (savedPhone) setPassengerPhone(savedPhone);
     else {
-      async function fetchUserProfile() {
+      async function fetchUserEmail() {
         try {
           const token = sessionStorage.getItem('authToken');
           const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/user/profile`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           const data = await res.json();
-          if (res.ok) {
-            setPassengerName(data.first_name || '');
+          if (res.ok && data.email) {
+            setPassengerEmail(data.email);
+            setPassengerName(data.name || '');
             setPassengerPhone(data.phone || '');
-            setPassengerEmail(data.email || '');
-            sessionStorage.setItem('userFirstName', data.first_name);
-            sessionStorage.setItem('userPhone', data.phone);
             sessionStorage.setItem('userEmail', data.email);
           }
         } catch (err) {
           console.error(err);
         }
       }
-      fetchUserProfile();
+      fetchUserEmail();
     }
   }, []);
 
-  // ---------------- Ride updates ----------------
+  // Listen for ride updates
   useEffect(() => {
     if (!selectedRide) return;
+
     socket.emit("joinRideRoom", selectedRide.id);
 
     const handleRideUpdate = (ride) => {
@@ -189,7 +183,6 @@ export default function PassengerDashboard() {
     }
   };
 
-  // ---------------- Book Ride ----------------
   const onBookClick = async () => {
     if (!passengerName || !passengerEmail || !passengerPhone || !pickup || !dropoff) {
       setSnackbar({ open: true, message: 'Please fill all fields', severity: 'error' });
@@ -201,11 +194,11 @@ export default function PassengerDashboard() {
     }
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/rides`, {
+          const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/rides`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          passenger_name: passengerName, // mapped to backend field
+          passenger_name: passengerName,
           passenger_email: passengerEmail,
           passenger_phone: passengerPhone,
           pickup_location: pickup,
@@ -220,9 +213,7 @@ export default function PassengerDashboard() {
 
       setSnackbar({ open: true, message: data.message, severity: 'success' });
 
-      setPickup(''); setDropoff(''); setRideType(''); setRidePrice('');
-      setPassengerName(''); setPassengerPhone('');
-      setRideBooked(true);
+      setPickup(''); setDropoff(''); setRideType(''); setRidePrice(''); setPassengerName(''); setPassengerPhone(''); setRideBooked(true);
 
       socket.emit("newRide", {
         id: data.rideId,
@@ -243,10 +234,17 @@ export default function PassengerDashboard() {
   };
 
   const onSnackbarClose = () => setSnackbar(prev => ({ ...prev, open: false }));
-  const handleConfirmRide = () => { setOpenConfirmDialog(false); setSnackbar({ open: true, message: `Ride #${rideToConfirm.id} confirmed!`, severity: 'success' }); };
+
+  const handleConfirmRide = () => {
+    setOpenConfirmDialog(false);
+    setSnackbar({ open: true, message: `Ride #${rideToConfirm.id} confirmed!`, severity: 'success' });
+  };
+
   const handleCancelRide = async () => {
     try {
-      await fetch(`http://localhost:3001/api/rides/${rideToConfirm.id}/cancel`, { method: 'POST' });
+      await 
+      
+      (`http://localhost:3001/api/rides/${rideToConfirm.id}/cancel`, { method: 'POST' });
       setOpenConfirmDialog(false);
       setSnackbar({ open: true, message: `Ride #${rideToConfirm.id} cancelled`, severity: 'error' });
       setSelectedRide(null);
@@ -255,29 +253,47 @@ export default function PassengerDashboard() {
     }
   };
 
+  // Drawer toggle
   const toggleDrawer = (open) => () => setDrawerOpen(open);
 
-  // ---------------- Render ----------------
+  // ------------------ Render ------------------
   return (
     <>
       {/* Header */}
-      <Box sx={{ bgcolor: '#82b1ff', color: 'white', p: 2, textAlign: 'left', fontWeight: 'bold', fontSize: isDesktop ? '1.5rem' : '1.25rem', pl: isDesktop ? '50px' : '20px', display: 'flex', alignItems: 'center', justifyContent: isDesktop ? 'space-between' : 'flex-start' }}>
+      <Box sx={{
+        bgcolor: '#82b1ff',
+        color: 'white',
+        p: 2,
+        textAlign: 'left',
+        fontWeight: 'bold',
+        fontSize: isDesktop ? '1.5rem' : '1.25rem',
+        pl: isDesktop ? '50px' : '20px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: isDesktop ? 'space-between' : 'flex-start'
+      }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <img src="/taxifav.png" alt="Taxi Icon" style={{ width: isDesktop ? 35 : 30, height: isDesktop ? 35 : 30, marginRight: 10 }} />
           <span style={{ fontWeight: 'bold', fontSize: isDesktop ? '1.75rem' : '1.5rem' }}>SWYFT - Passenger Dashboard</span>
         </Box>
 
-        {isDesktop ? (
+        {/* Desktop Buttons */}
+        {isDesktop && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Button variant="contained" color="secondary" onClick={() => navigate('/')} sx={{ borderRadius: '15px', backgroundColor: '#ffffff', fontWeight: 'bold', padding: '10px 24px', color: '#000', '&:hover': { backgroundColor: '#f0f0f0' } }}>Home</Button>
             <Button variant="outlined" color="inherit" onClick={() => navigate('/signin')} sx={{ borderRadius: '15px', borderColor: '#fff', color: '#fff', fontWeight: 'bold', '&:hover': { borderColor: '#f0f0f0', color: '#f0f0f0' } }}>Sign Out</Button>
           </Box>
-        ) : (
-          <IconButton color="inherit" sx={{ ml: 'auto' }} onClick={toggleDrawer(true)}><MenuIcon /></IconButton>
+        )}
+
+        {/* Mobile Hamburger */}
+        {!isDesktop && (
+          <IconButton color="inherit" sx={{ ml: 'auto' }} onClick={toggleDrawer(true)}>
+            <MenuIcon />
+          </IconButton>
         )}
       </Box>
 
-      {/* Drawer */}
+      {/* Mobile Drawer */}
       <Drawer anchor="right" open={drawerOpen} onClose={toggleDrawer(false)}>
         <Box sx={{ width: 250 }} role="presentation" onClick={toggleDrawer(false)}>
           <List>
