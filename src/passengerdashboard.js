@@ -101,29 +101,18 @@ export default function PassengerDashboard() {
 
   const ridePrices = { economy: 150, premium: 200, luxury: 300 };
 
-  useEffect(() => {
+useEffect(() => {
+  // Get token from sessionStorage
   const token = sessionStorage.getItem('authToken');
+
+  // If no token, redirect to signin page immediately
   if (!token) {
     navigate('/signin');
     return;
   }
 
-  async function validateToken() {
-    try {
-      const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/user/validate-token`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) {
-        navigate('/signin'); // invalid token
-      }
-    } catch (err) {
-      navigate('/signin');
-    }
-  }
-
-  validateToken();
+  // Optional: you can also validate the token with backend here if needed
 }, [navigate]);
-
 
   // Fetch user info
   useEffect(() => {
