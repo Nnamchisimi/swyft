@@ -101,39 +101,33 @@ export default function PassengerDashboard() {
 
   const ridePrices = { economy: 150, premium: 200, luxury: 300 };
 
-  // ------------------ Fetch logged-in user info ------------------
-useEffect(() => {
-  const fetchUserProfile = async () => {
-    try {
-      const token = sessionStorage.getItem('authToken');
-      if (!token) return;
-
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/user/profile`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+  // Fetch user info
+  useEffect(() => {
+    const savedEmail = sessionStorage.getItem('userEmail');
+    if (savedEmail) setPassengerEmail(savedEmail);
+    else {
+      async function fetchUserEmail() {
+        try {
+          const token = sessionStorage.getItem('authToken');
+          const res = await fetch('http://localhost:3001/api/user/profile', {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const data = await res.json();
+          if (res.ok && data.email) {
+            setPassengerEmail(data.email);
+            setPassengerName(data.name || '');
+            setPassengerPhone(data.phone || '');
+            sessionStorage.setItem('userEmail', data.email);
+          }
+        } catch (err) {
+          console.error(err);
         }
-      });
-
-      if (!response.ok) return;
-
-      const data = await response.json();
-      if (data) {
-        setPassengerName(`${data.firstName} ${data.lastName}`.trim());
-        setPassengerEmail(data.email || '');
-        setPassengerPhone(data.phone || '');
       }
-    } catch (error) {
-      console.error(error);
+      fetchUserEmail();
     }
-  };
+  }, []);
 
-  fetchUserProfile();
-}, []);
-
-
-  // ------------------ Listen for ride updates ------------------
+  // Listen for ride updates
   useEffect(() => {
     if (!selectedRide) return;
 
@@ -200,7 +194,7 @@ useEffect(() => {
     }
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/rides`, {
+          const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/rides`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -248,7 +242,9 @@ useEffect(() => {
 
   const handleCancelRide = async () => {
     try {
-      await fetch(`http://localhost:3001/api/rides/${rideToConfirm.id}/cancel`, { method: 'POST' });
+      await 
+      
+      (`http://localhost:3001/api/rides/${rideToConfirm.id}/cancel`, { method: 'POST' });
       setOpenConfirmDialog(false);
       setSnackbar({ open: true, message: `Ride #${rideToConfirm.id} cancelled`, severity: 'error' });
       setSelectedRide(null);
@@ -257,8 +253,10 @@ useEffect(() => {
     }
   };
 
+  // Drawer toggle
   const toggleDrawer = (open) => () => setDrawerOpen(open);
 
+  // ------------------ Render ------------------
   return (
     <>
       {/* Header */}
@@ -279,6 +277,7 @@ useEffect(() => {
           <span style={{ fontWeight: 'bold', fontSize: isDesktop ? '1.75rem' : '1.5rem' }}>SWYFT - Passenger Dashboard</span>
         </Box>
 
+        {/* Desktop Buttons */}
         {isDesktop && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Button variant="contained" color="secondary" onClick={() => navigate('/')} sx={{ borderRadius: '15px', backgroundColor: '#ffffff', fontWeight: 'bold', padding: '10px 24px', color: '#000', '&:hover': { backgroundColor: '#f0f0f0' } }}>Home</Button>
@@ -286,6 +285,7 @@ useEffect(() => {
           </Box>
         )}
 
+        {/* Mobile Hamburger */}
         {!isDesktop && (
           <IconButton color="inherit" sx={{ ml: 'auto' }} onClick={toggleDrawer(true)}>
             <MenuIcon />
