@@ -342,9 +342,9 @@ useEffect(() => {
       <Box sx={{ display: 'flex', flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'center', mt: 2, px: isDesktop ? 7 : 2, gap: 3, alignItems: isDesktop ? 'flex-start' : 'center' }}>
         <Container maxWidth="xs" sx={{ p: 4, border: '1px solid #ccc', borderRadius: 3, width: '100%', maxWidth: 360 }}>
           <Typography variant={isDesktop ? "h5" : "h6"} align={isDesktop ? "left" : "center"} gutterBottom sx={{ fontWeight: 'bold' }}>Book a Ride</Typography>
-          <TextField fullWidth label="Passenger Name" margin="normal" value={passengerName} onChange={handleChange(setPassengerName)} />
+          <TextField fullWidth label="Passenger Name" margin="normal" value={passengerName} disabled />
           <TextField fullWidth label="Passenger Email" margin="normal" value={passengerEmail} disabled />
-          <TextField fullWidth label="Passenger Phone" margin="normal" value={passengerPhone} onChange={handleChange(setPassengerPhone)} />
+          <TextField fullWidth label="Passenger Phone" margin="normal" value={passengerPhone} disabled/>
           <LocationInput label="Pickup Location" value={pickup} onSelect={setPickup} />
           <LocationInput label="Drop-off Location" value={dropoff} onSelect={setDropoff} />
 
