@@ -62,17 +62,12 @@ useEffect(() => {
   if (savedDriver) {
     const driver = JSON.parse(savedDriver);
 
-    // ✅ Ensure both are present
-    driver.first_name = driver.first_name || "";
-    driver.last_name = driver.last_name || "";
-
-    // ✅ Store a merged full name
-    driver.name = `${driver.first_name} ${driver.last_name}`.trim();
+    // Use consistent field names from backend
+    driver.name = `${driver.first_name || ""} ${driver.last_name || ""}`.trim();
 
     setDriverInfo(driver);
   }
 }, []);
-
 
 
 
