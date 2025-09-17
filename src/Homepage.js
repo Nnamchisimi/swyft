@@ -361,7 +361,7 @@ export default function HomePage() {
 >
   {/* Text Section */}
   <Box>
-    <Typography variant="h2" fontWeight="bold" gutterBottom sx={{ color: '#4e4e4eff' }}> Moving You, Smarter</Typography>
+    <Typography variant="h4" fontWeight="bold" gutterBottom sx={{ color: '#4e4e4eff' }}> Moving You, Smarter</Typography>
     <Typography  variant="h6" color="text.secondary" gutterBottom>
       By sharing our industry insights and real-time ride data, we make city travel faster, safer, and easier for everyone.
     </Typography>
