@@ -102,6 +102,25 @@ export default function PassengerDashboard() {
   const ridePrices = { economy: 150, premium: 200, luxury: 300 };
 
   
+useEffect(() => {
+  async function fetchNameByEmail() {
+    if (passengerEmail && !passengerName) {
+      try {
+        const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/users/by-email?email=${passengerEmail}`);
+        const data = await res.json();
+        if (res.ok) {
+          setPassengerName(data.name);
+          if (data.phone) setPassengerPhone(data.phone);
+        }
+      } catch (err) {
+        console.error("Failed to fetch name by email:", err);
+      }
+    }
+  }
+  fetchNameByEmail();
+}, [passengerEmail, passengerName]);
+
+
   // Fetch user info
   useEffect(() => {
     const savedEmail = sessionStorage.getItem('userEmail');
