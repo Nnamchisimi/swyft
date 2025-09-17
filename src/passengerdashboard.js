@@ -315,7 +315,7 @@ export default function PassengerDashboard() {
 
       {/* Passenger Info */}
       <Typography variant="h6" gutterBottom sx={{ mt: 2, pl: isDesktop ? 5 : 3 }}>
-        Welcome, {passenger_name} ({passengerEmail}) : {passenger_phone}
+        Welcome, {passengerName} ({passengerEmail}) : {passengerPhone}
       </Typography>
 
       {/* Main content */}
