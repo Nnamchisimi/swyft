@@ -101,18 +101,6 @@ export default function PassengerDashboard() {
 
   const ridePrices = { economy: 150, premium: 200, luxury: 300 };
 
-useEffect(() => {
-  // Check if user session exists (replace 'userSession' with your actual key)
-  const session = sessionStorage.getItem('userSession');
-
-  // If no session, redirect to signin page immediately
-  if (!session) {
-    navigate('/signin');
-    return;
-  }
-
-  // Optional: validate session with backend if needed
-}, [navigate]);
 
   
   // Fetch user info
