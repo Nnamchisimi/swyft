@@ -101,7 +101,6 @@ export default function PassengerDashboard() {
 
   const ridePrices = { economy: 150, premium: 200, luxury: 300 };
 
-
   
   // Fetch user info
   useEffect(() => {
