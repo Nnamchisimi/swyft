@@ -93,16 +93,19 @@ const transporter = nodemailer.createTransport({
 
 // ====== GET USER BY EMAIL ======
 // ====== GET USER BY EMAIL (only first_name) ======
+// ====== GET USER BY EMAIL ======
 app.get('/api/users/by-email', async (req, res) => {
   const { email } = req.query;
   if (!email) return res.status(400).json({ error: 'Email is required' });
 
   try {
-    const user = await User.findOne({ email }).select('first_name email phone role vehicle_plate');
+    const user = await User.findOne({ email }).select('first_name last_name email phone role vehicle_plate');
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     res.json({
       first_name: user.first_name || '',
+      last_name: user.last_name || '',
+      name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
       email: user.email,
       phone: user.phone || '',
       role: user.role,
@@ -113,6 +116,7 @@ app.get('/api/users/by-email', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch user' });
   }
 });
+
 
 
 // Root
