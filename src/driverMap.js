@@ -132,46 +132,44 @@ export default function DriverMap({ ride }) {
   }
 
   return (
-   <Paper
-  elevation={3}
-  sx={{
-    mt: 2,
-    p: 1,
-    borderRadius: 2,
-    overflow: "hidden",
-    height: 400,
-    width: "100%",       // full width of parent
-    boxSizing: "border-box", // include padding in width
-  }}
->
-  <Box sx={{ height: "100%", width: "100%" }}>
-    <GoogleMap
-      mapContainerStyle={{ width: "80%", height: "100%" }}
-      center={pickup || dropoff || driverLocation}
-      zoom={13}
-      onLoad={(map) => (mapRef.current = map)}
+    <Paper
+      elevation={3}
+      sx={{
+        mt: 2,
+        p: 1,
+        borderRadius: 2,
+        overflow: "hidden",
+        height: 400,
+        width: { xs: "80%", sm: "80%", md: "40%", mx: "auto" },
+      }}
     >
-      {pickup && <Marker position={pickup} label="Pickup" />}
-      {dropoff && <Marker position={dropoff} label="Drop-off" />}
-      {driverLocation && (
-        <Marker
-          position={driverLocation}
-          icon={{
-            url: "https://maps.google.com/mapfiles/kml/shapes/cabs.png",
-            scaledSize: new window.google.maps.Size(40, 40),
-          }}
-        />
+      <Box sx={{ height: "90%", width: "100%" }}>
+        <GoogleMap
+          mapContainerStyle={containerStyle}
+          center={pickup || dropoff || driverLocation}
+          zoom={13}
+          onLoad={(map) => (mapRef.current = map)}
+        >
+          {pickup && <Marker position={pickup} label="Pickup" />}
+          {dropoff && <Marker position={dropoff} label="Drop-off" />}
+          {driverLocation && (
+            <Marker
+              position={driverLocation}
+              icon={{
+                url: "https://maps.google.com/mapfiles/kml/shapes/cabs.png",
+                scaledSize: new window.google.maps.Size(40, 40),
+              }}
+            />
+          )}
+          {directions && <DirectionsRenderer directions={directions} />}
+        </GoogleMap>
+      </Box>
+      {(distance || duration) && (
+        <Box sx={{ mt: 1, textAlign: "center" }}>
+          {distance && <Typography variant="body1">Distance: {distance}</Typography>}
+          {duration && <Typography variant="body1">Duration: {duration}</Typography>}
+        </Box>
       )}
-      {directions && <DirectionsRenderer directions={directions} />}
-    </GoogleMap>
-  </Box>
-  {(distance || duration) && (
-    <Box sx={{ mt: 1, textAlign: "center" }}>
-      {distance && <Typography variant="body1">Distance: {distance}</Typography>}
-      {duration && <Typography variant="body1">Duration: {duration}</Typography>}
-    </Box>
-  )}
-</Paper>
-
+    </Paper>
   );
 }
