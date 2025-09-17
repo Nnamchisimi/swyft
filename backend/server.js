@@ -92,16 +92,17 @@ const transporter = nodemailer.createTransport({
 // ====== Routes ======
 
 // ====== GET USER BY EMAIL ======
+// ====== GET USER BY EMAIL (only first_name) ======
 app.get('/api/users/by-email', async (req, res) => {
   const { email } = req.query;
   if (!email) return res.status(400).json({ error: 'Email is required' });
 
   try {
-    const user = await User.findOne({ email }).select('first_name last_name email phone role vehicle_plate');
+    const user = await User.findOne({ email }).select('first_name email phone role vehicle_plate');
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     res.json({
-      name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+      first_name: user.first_name || '',
       email: user.email,
       phone: user.phone || '',
       role: user.role,
