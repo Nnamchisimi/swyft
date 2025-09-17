@@ -102,18 +102,19 @@ export default function PassengerDashboard() {
   const ridePrices = { economy: 150, premium: 200, luxury: 300 };
 
 useEffect(() => {
-  // Get token from sessionStorage
-  const token = sessionStorage.getItem('authToken');
+  // Check if user session exists (replace 'userSession' with your actual key)
+  const session = sessionStorage.getItem('userSession');
 
-  // If no token, redirect to signin page immediately
-  if (!token) {
+  // If no session, redirect to signin page immediately
+  if (!session) {
     navigate('/signin');
     return;
   }
 
-  // Optional: you can also validate the token with backend here if needed
+  // Optional: validate session with backend if needed
 }, [navigate]);
 
+  
   // Fetch user info
   useEffect(() => {
     const savedEmail = sessionStorage.getItem('userEmail');
