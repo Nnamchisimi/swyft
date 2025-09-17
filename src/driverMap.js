@@ -140,11 +140,11 @@ export default function DriverMap({ ride }) {
     borderRadius: 2,
     overflow: "hidden",
     height: 400,
-    width: "100%",       // full width of parent
+    width: "80%",       // full width of parent
     boxSizing: "border-box", // include padding in width
   }}
 >
-  <Box sx={{ height: "100%", width: "100%" }}>
+  <Box sx={{ height: "100%", width: "80%" }}>
     <GoogleMap
       mapContainerStyle={{ width: "100%", height: "100%" }}
       center={pickup || dropoff || driverLocation}
