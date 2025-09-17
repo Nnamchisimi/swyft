@@ -140,7 +140,7 @@ export default function DriverMap({ ride }) {
         borderRadius: 2,
         overflow: "hidden",
         height: 400,
-        width: { xs: "92%", sm: "80%", md: "40%", mx: "auto" },
+        width: { xs: "100%", sm: "80%", md: "40%", mx: "auto" },
       }}
     >
       <Box sx={{ height: "90%", width: "100%" }}>
