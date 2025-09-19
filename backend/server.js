@@ -137,7 +137,17 @@ app.post('/api/users', async (req, res) => {
     if (existing) return res.status(400).json({ error: 'Email already exists' });
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({ firstName, lastName, email, password: hashedPassword, role, phone, vehicle, is_verified: false });
+   
+    const user = await User.create({
+      first_name: firstName,   // ✅ match schema
+      last_name: lastName,     // ✅ match schema
+      email,
+      password: hashedPassword,
+      role,
+      phone,
+      vehicle_plate: vehicle,  // ✅ match schema
+      is_verified: false
+    });
 
     // Create verification token
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
