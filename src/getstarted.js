@@ -64,7 +64,7 @@ export default function GetStarted() {
     try {
       setLoading(true);
 
-      const res = await fetch('http://localhost:3001/api/users', {
+      const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newUser),
